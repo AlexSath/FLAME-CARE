@@ -7,7 +7,7 @@ class TileData():
         logger = logging.getLogger("main")
         self.availableData = []
 
-        try:
+        try: # loading tile data from JSON before parsing
             data = json.load(open(path, 'r'))
         except Exception as e:
             logger.exception(f"Could not open JSON at provided path {path}.\nERROR:{e}")
