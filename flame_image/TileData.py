@@ -1,10 +1,17 @@
 import logging
+import json
 import numpy as np
 
 class TileData():
-    def __init__(self, data: dict) -> None:
+    def __init__(self, path: str) -> None:
         logger = logging.getLogger("main")
         self.availableData = []
+
+        try:
+            data = json.load(open(path, 'r'))
+        except Exception as e:
+            logger.exception(f"Could not open JSON at provided path {path}.\nERROR:{e}")
+            raise
 
         try: # put all required keys in a try/except
             # Check if overarching TileData item is found in the JSON
@@ -138,3 +145,6 @@ class TileData():
     
     def __str__(self):
         return f"TileData object with {len(self.availableData)} available datapoints. Use 'availableData' attribute to see them."
+    
+    def __len__(self):
+        return len(self.availableData)
