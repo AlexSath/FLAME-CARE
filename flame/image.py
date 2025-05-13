@@ -50,6 +50,7 @@ class FLAMEImage():
             self.tileData = TileData(self.jsonpath)
             self.imageData = None
             self.imShape = None
+            self.imDType = None
             self.isOpen = False
             self.checkChannels = checkChannels
             self.hasChannels = False
@@ -77,6 +78,7 @@ class FLAMEImage():
         """Will open the image into the memory of the object."""
         self.imageData = self.raw()
         self.imShape = self.imageData.shape
+        self.imDType = self.imageData.dtype
         self.isOpen = True
 
     def closeImage(self) -> None:
@@ -150,8 +152,8 @@ class FLAMEImage():
             self.logger.warning(f"Did not recognize operation {op} for frame aggregation. Performing 'addition' instead...")
             frames = np.sum(frames, axis=0)
 
-        assert np.all(frames) != 0
-        
+        assert not np.all(frames == 0)
+
         return frames
 
     def __repr__(self) -> str:
