@@ -49,6 +49,7 @@ class FLAMEImage():
             self.jsonpath = self.get_json_path(jsonext)
             self.tileData = TileData(self.jsonpath)
             self.imageData = None
+            self.imShape = None
             self.isOpen = False
             self.checkChannels = checkChannels
             self.hasChannels = False
@@ -75,6 +76,7 @@ class FLAMEImage():
     def openImage(self) -> None:
         """Will open the image into the memory of the object."""
         self.imageData = self.raw()
+        self.imShape = self.imageData.Shape
         self.isOpen = True
 
     def closeImage(self) -> None:
@@ -95,9 +97,11 @@ class FLAMEImage():
         Caution!! Assumes image will be in *XY format
         * is the wildcard dimension, which theoretically could contain intercolated Z, channel, and frame information     
         """
-        self.openImage()
-        this_shape = self.imageData.shape
-        this_dim = this_shape[0] # assumes the wildcard will be in first channel
+        if self.imShape is None:
+            self.openImage() # if imshape is none, that means image has never been opened.
+            self.closeImage() # by cycling imshape, self.imShape gets set.
+
+        this_dim = self.imShape[0] # assumes the wildcard will be in first channel
         try:
             Zs = self.tileData.tileZs
             frames = self.tileData.framesPerTile
@@ -148,7 +152,7 @@ class FLAMEImage():
         return frames
 
     def __repr__(self) -> str:
-        return f"FLAME Image @ {self.impath}"
+        return f"FLAME Image @{hex(id(self))} from {self.impath}"
 
     def __str__(self) -> str:
-        return f"FLAME Image @ {self.impath}"
+        return f"FLAME Image @{hex(id(self))} from {self.impath}"
