@@ -7,7 +7,5 @@ __all__ = [k for k in globals().keys() if not k.startswith("_")]
 
 # The custom errors will not live in namespace __all__
 # This means that they can only be imported as:
-#  - "from flame.tile import TileJSONNotFoundError"
-#  - "from flame.image import FLAMEImageError"
-from .tile import TileJSONNotFoundError
-from .image import FLAMEImageError
+#  - "from flame.error import TileJSONNotFoundError"
+from .error import *
