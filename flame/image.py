@@ -88,11 +88,14 @@ class FLAMEImage():
         self.isOpen = False
     
     def raw(self) -> np.array:
-        try:
-            return tiff.imread(self.impath)
-        except Exception as e:
-            self.logger.error(f"Could not load tiff from {self.impath}.\nERROR: {e}")
-            raise FLAMEImageError(f"Could not load tiff from {self.impath}.\nERROR: {e}")
+        if self.isOpen:
+            return self.imageData
+        else:
+            try:
+                return tiff.imread(self.impath)
+            except Exception as e:
+                self.logger.error(f"Could not load tiff from {self.impath}.\nERROR: {e}")
+                raise FLAMEImageError(f"Could not load tiff from {self.impath}.\nERROR: {e}")
         
     def checkForCompleteness(self) -> None:
         """
@@ -141,10 +144,7 @@ class FLAMEImage():
 
     def get_frames(self, start: int, end: int, op: str="add") -> np.array:
         # assumes [Frame, Channels, X, Y] shape of tiff
-        if not self.isOpen:
-            frames = self.raw()[start:end,...]
-        elif self.isOpen:
-            frames = self.imageData[start:end,...]
+        frames = self.raw()[start:end,...]
         
         if op == "add":
             frames = np.sum(frames, axis=0)
