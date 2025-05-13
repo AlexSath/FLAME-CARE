@@ -1,4 +1,4 @@
-class TileJSONNotFoundError(Exception):
+class TileDataError(Exception):
     "Raise if the JSON corresponding to the FLAME Image cannot be found"
     def __init__(self, message):
         self.message = message

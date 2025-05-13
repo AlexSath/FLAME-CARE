@@ -2,7 +2,7 @@ import logging
 import json
 import numpy as np
 
-from .error import TileJSONNotFoundError
+from .error import TileDataError
 
 class TileData():
     def __init__(self, path: str) -> None:
@@ -12,16 +12,16 @@ class TileData():
         try: # loading tile data from JSON before parsing
             data = json.load(open(path, 'r'))
         except Exception as e:
-            logger.exception(f"Could not open JSON at provided path {path}.\nERROR:{e}")
-            raise TileJSONNotFoundError(f"Could not open JSON at provided path {path}.\nERROR:{e}")
+            logger.error(f"Could not open JSON at provided path {path}.\nERROR:{e}")
+            raise TileDataError(f"Could not open JSON at provided path {path}.\nERROR:{e}")
 
         try: # put all required keys in a try/except
             # Check if overarching TileData item is found in the JSON
             try:
                 tileData = data['TileData']
             except KeyError as e:
-                logger.exception("'TileData' key not found in provided JSON")
-                raise
+                logger.exception("Required key 'TileData' not found in provided JSON")
+                raise TileDataError("Required key 'TileData' not found in provided JSON")
             logger.info('Found TileData within provided JSON')
 
             # Within TileData, check for known keys and handle any missing keys.
@@ -29,61 +29,61 @@ class TileData():
                 self.tileID = tileData.pop('tileID', None)
                 self.availableData.append('tileID')
             except KeyError as e:
-                logger.exception("'tileID' not found in tile data JSON")
-                raise
+                logger.error("Required key 'tileID' not found in tile data JSON")
+                raise TileDataError("Required key 'tileID' not found in tile data JSON")
 
             try:
                 self.tileResolution = np.array(tileData.pop('tileResolution', None), dtype=np.uint16)
                 self.availableData.append('tileResolution')
             except KeyError as e:
-                logger.exception("'tileResolution' not found in tile data JSON")
-                raise
+                logger.error("Required key 'tileResolution' not found in tile data JSON")
+                raise TileDataError("Required key 'tileResolution' not found in tile data JSON")
 
             try:
                 self.tileChannelsAvailable = np.array(tileData.pop('tileChannelsAvailable', None), dtype=np.uint8)
                 self.availableData.append('tileChannelsAvailable')
             except KeyError as e:
-                logger.exception("'tileChannelsAvailable' not found in tile data JSON")
-                raise
+                logger.error("Required key 'tileChannelsAvailable' not found in tile data JSON")
+                raise TileDataError("Required key 'tileChannelsAvailable' not found in tile data JSON")
 
             try:
                 self.channelsAcquired = np.array(tileData.pop('channelsAcquired', None), dtype=np.uint8)
                 self.availableData.append('channelsAcquired')
             except KeyError as e:
-                logger.exception("'channelsAcquired' not found in tile data JSON")
-                raise
+                logger.error("Required key 'channelsAcquired' not found in tile data JSON")
+                raise TileDataError("Required key 'channelsAcquired' not found in tile data JSON")
             
             try:
                 self.channelsSaved = np.array(tileData.pop('channelsSaved', None), dtype=np.uint8)
                 self.availableData.append('channelsSaved')
             except KeyError as e:
-                logger.exception("'channelsSaved' not found in tile data JSON")
-                raise
+                logger.error("Required key 'channelsSaved' not found in tile data JSON")
+                raise TileDataError("Required key 'channelsSaved' not found in tile data JSON")
 
             try:
                 self.framesPerTile = int(tileData.pop('framesPerTile', None))
                 self.availableData.append('framesPerTile')
             except KeyError as e:
-                logger.exception("'framesPerTile' not found in tile data JSON")
-                raise
+                logger.error("Required key 'framesPerTile' not found in tile data JSON")
+                raise TileDataError("Required key 'framesPerTile' not found in tile data JSON")
 
             try:
                 self.tileScannedThisFile = int(tileData.pop('tileScannedThisFile'))
                 self.availableData.append('tileScannedThisFile')
             except KeyError as e:
-                logger.exception("'tileScannedThisFile' not found in tile data JSON")
-                raise
+                logger.error("Required key 'tileScannedThisFile' not found in tile data JSON")
+                raise TileDataError("Required key 'tileScannedThisFile' not found in tile data JSON")
 
             try:
                 self.tileZs = int(tileData.pop('tileZs', None))
                 self.availableData.append('tileZs')
             except KeyError as e:
-                logger.exception("'tileZs' not found in tile data JSON")
-                raise
+                logger.error("Required key 'tileZs' not found in tile data JSON")
+                raise TileDataError("Required key 'tileZs' not found in tile data JSON")
         
         except Exception as e: # for all non-key error exceptions
             logger.exception(f"Failed to load required information from tile data JSON.\nEXCEPTION: {e}")
-            raise
+            raise TileDataError(f"Failed to load required information from tile data JSON.\nEXCEPTION: {e}")
 
         logger.info("Successfully loaded all required keys from tile data JSON")
 
