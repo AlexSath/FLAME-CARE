@@ -11,7 +11,7 @@ class TileData():
             data = json.load(open(path, 'r'))
         except Exception as e:
             logger.exception(f"Could not open JSON at provided path {path}.\nERROR:{e}")
-            raise
+            raise TileJSONNotFoundError
 
         try: # put all required keys in a try/except
             # Check if overarching TileData item is found in the JSON
@@ -148,3 +148,10 @@ class TileData():
     
     def __len__(self):
         return len(self.availableData)
+
+
+class TileJSONNotFoundError(Exception):
+    "Raise if the JSON corresponding to the FLAME Image cannot be found"
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
