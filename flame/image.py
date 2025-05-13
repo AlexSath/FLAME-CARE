@@ -144,15 +144,20 @@ class FLAMEImage():
 
     def get_frames(self, start: int, end: int, op: str="add") -> np.array:
         # assumes [Frame, Channels, X, Y] shape of tiff
-        frames = self.raw()[start:end,...]
-        
-        if op == "add":
-            frames = np.sum(frames, axis=0)
-        else:
-            self.logger.warning(f"Did not recognize operation {op} for frame aggregation. Performing 'addition' instead...")
-            frames = np.sum(frames, axis=0)
+        try:
+            frames = self.raw()[start:end,...]
+            
+            if op == "add":
+                frames = np.sum(frames, axis=0)
+            else:
+                self.logger.warning(f"Did not recognize operation {op} for frame aggregation. Performing 'addition' instead...")
+                frames = np.sum(frames, axis=0)
 
-        assert not np.all(frames == 0)
+            assert not np.all(frames == 0)
+
+        except Exception as e:
+            self.logger.exception(f"Failed to get frames from {self}.\nERROR: {e}")
+            raise FLAMEImageError(f"Failed to get frames from {self}.\nERROR: {e}")
 
         return frames
 
