@@ -76,7 +76,7 @@ class FLAMEImage():
     def openImage(self) -> None:
         """Will open the image into the memory of the object."""
         self.imageData = self.raw()
-        self.imShape = self.imageData.Shape
+        self.imShape = self.imageData.shape
         self.isOpen = True
 
     def closeImage(self) -> None:
@@ -101,7 +101,7 @@ class FLAMEImage():
             self.openImage() # if imshape is none, that means image has never been opened.
             self.closeImage() # by cycling imshape, self.imShape gets set.
 
-        this_dim = self.imShape[0] # assumes the wildcard will be in first channel
+        this_dim = np.cumprod(self.imShape[:-2])[-1] # take product of all channels before XY
         try:
             Zs = self.tileData.tileZs
             frames = self.tileData.framesPerTile
@@ -131,10 +131,10 @@ class FLAMEImage():
                 raise Exception(f"No dim checks provided for tiff. Cannot verify completeness.")
         except Exception as e:
             self.logger.exception(f"Could not verify completeness of tiff from {self.impath}.\n" \
-                                  + f"Dim: {this_shape} | Zs: {Zs} | Frames: {frames} | Channels: {channels}" \
+                                  + f"Dim: {self.imShape} | Zs: {Zs} | Frames: {frames} | Channels: {channels}" \
                                   + f"\nERROR: {e}")
             raise FLAMEImageError(f"Could not verify completeness of tiff from {self.impath}.\n" \
-                                  + f"Dim: {this_shape} | Zs: {Zs} | Frames: {frames} | Channels: {channels}" \
+                                  + f"Dim: {self.imShape} | Zs: {Zs} | Frames: {frames} | Channels: {channels}" \
                                   + f"\nERROR: {e}")
 
     def get_frames(self, start: int, end: int, op: str="add") -> np.array:
@@ -149,6 +149,9 @@ class FLAMEImage():
         else:
             self.logger.warning(f"Did not recognize operation {op} for frame aggregation. Performing 'addition' instead...")
             frames = np.sum(frames, axis=0)
+
+        assert np.all(frames) != 0
+        
         return frames
 
     def __repr__(self) -> str:
