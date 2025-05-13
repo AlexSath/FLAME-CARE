@@ -4,7 +4,8 @@ import os
 import numpy as np
 import tifffile as tiff
 
-from .tile import TileData, TileJSONNotFoundError
+from .tile import TileData
+from .error import FLAMEImageError, TileJSONNotFoundError
 
 class FLAMEImage():
     def __init__(self, impath: str, jsonext: str) -> None:
@@ -17,7 +18,7 @@ class FLAMEImage():
             self.tileData = TileData(self.jsonpath)
         except Exception as e:
             self.logger.exception(f"Could not initialize FLAMEImage object from {impath}")
-            raise FLAMEImageError
+            raise FLAMEImageError(f"Could not initialize FLAMEImage object from {impath}")
         
         self.logger.info(f"Loaded FLAME Image tile data with {len(self.tileData)} data points")
 
@@ -28,14 +29,14 @@ class FLAMEImage():
             return jsonpath
         else:
             self.logger.exception(f"Could not find JSON associated with the image {imname} ({ext} was provided as JSON extention)")
-            raise TileJSONNotFoundError
+            raise TileJSONNotFoundError(f"Could not find JSON associated with the image {imname} ({ext} was provided as JSON extention)")
 
     def raw(self) -> np.array:
         try:
             return tiff.imread(self.impath)
         except Exception as e:
             self.logger.exception(f"Could not load tiff from {self.impath}.\nERROR: {e}")
-            raise FLAMEImageError
+            raise FLAMEImageError(f"Could not load tiff from {self.impath}.\nERROR: {e}")
 
     def get_frames(self, start: int, end: int, op: str="add") -> np.array:
         # assumes [Frame, Channels, X, Y] shape of tiff
@@ -52,10 +53,3 @@ class FLAMEImage():
 
     def __str__(self) -> str:
         return f"FLAME Image @ {self.impath}"
-
-
-class FLAMEImageError(Exception):
-    "Raise if the FLAME Image could not be initialized for any reason"
-    def __init__(self, message):
-        self.message = message
-        super().__init__(self.message)
