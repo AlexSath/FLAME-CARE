@@ -94,8 +94,8 @@ class FLAMEImage():
             try:
                 return tiff.imread(self.impath)
             except Exception as e:
-                self.logger.error(f"Could not load tiff from {self.impath}.\nERROR: {e}")
-                raise FLAMEImageError(f"Could not load tiff from {self.impath}.\nERROR: {e}")
+                self.logger.error(f"Could not load tiff from {self}.\nERROR: {e}")
+                raise FLAMEImageError(f"Could not load tiff from {self}.\nERROR: {e}")
         
     def checkForCompleteness(self) -> None:
         """
@@ -135,10 +135,10 @@ class FLAMEImage():
             else: # don't check anything; bad practice so raise exception
                 raise Exception(f"No dim checks provided for tiff. Cannot verify completeness.")
         except Exception as e:
-            self.logger.exception(f"Could not verify completeness of tiff from {self.impath}.\n" \
+            self.logger.exception(f"Could not verify completeness of tiff from {self}.\n" \
                                   + f"Dim: {self.imShape} | Zs: {Zs} | Frames: {frames} | Channels: {channels}" \
                                   + f"\nERROR: {e}")
-            raise FLAMEImageError(f"Could not verify completeness of tiff from {self.impath}.\n" \
+            raise FLAMEImageError(f"Could not verify completeness of tiff from {self}.\n" \
                                   + f"Dim: {self.imShape} | Zs: {Zs} | Frames: {frames} | Channels: {channels}" \
                                   + f"\nERROR: {e}")
 
