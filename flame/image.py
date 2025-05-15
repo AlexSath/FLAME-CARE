@@ -33,6 +33,10 @@ class FLAMEImage():
          - overrideNFrames (None, int): if None, don't override #frames. If not None, will override #frames with provided value
          - checkZs (bool): whether to confirm the number of Zs listed in the JSON matches the tif data (DEFAULT = False).
 
+         NOTE: overrideNZs is not required because tifffile package does not check for number of Zs when unpacking a tif of 
+         size NYX to ZFCYX. This means that with NChannel and NFrame overrides being set, the number of Zs will be dynamically
+         unpacked based on N (the number of pages in the raw tiff file).
+
         Attributes:
          - logger (Logger): the logger object with the name "main"
          - impath (str): the absolute path to the provided image
