@@ -10,3 +10,9 @@ class FLAMEImageError(Exception):
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
+
+class FLAMEDtypeError(Exception):
+    "Raise if some dtype could not be appropriate verified"
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
