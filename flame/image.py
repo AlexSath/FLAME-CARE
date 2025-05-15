@@ -1,19 +1,26 @@
 import logging
 import os
 import gc
+from typing import Any, Union
 
 import numpy as np
-import tifffile as tiff
+from tifffile import TiffFile
 
 from .tile import TileData
 from .error import FLAMEImageError, TileDataError
+from .utils import _validate_int_greater_than_zero
 
 class FLAMEImage():
-    def __init__(self, impath: str, jsonext: str, 
-                 checkChannels: bool = True,
-                 checkFrames: bool = True,
-                 checkZs: bool = False
-                 ) -> None:
+    def __init__(
+            self, 
+            impath: str, 
+            jsonext: str, 
+            checkChannels: bool = True,
+            overrideNChannels: int = None,
+            checkFrames: bool = True,
+            overrideNFrames: int = None,
+            checkZs: bool = False
+        ) -> None:
         """
         FLAMEImage object.
 
@@ -21,7 +28,9 @@ class FLAMEImage():
          - impath (str): the absoulte path to the provided image, expected to be in tif format.
          - jsonext (str): the expected string for the json paired with the image tif.
          - checkChannels (bool): whether to confirm the number of channels listed in the JSON matches the tif data (DEFAULT = True).
+         - overrideNChannels (None, int): if None, don't override #channels. If not None, will override #channels with provided value.
          - checkFrames (bool): whether to confirm the number of frames listed in the JSON matches the tif data (DEFAULT = True).
+         - overrideNFrames (None, int): if None, don't override #frames. If not None, will override #frames with provided value
          - checkZs (bool): whether to confirm the number of Zs listed in the JSON matches the tif data (DEFAULT = False).
 
         Attributes:
@@ -49,6 +58,7 @@ class FLAMEImage():
             self.jsonpath = self.get_json_path(jsonext)
             self.tileData = TileData(self.jsonpath)
             self.imageData = None
+            self.axes_shape = None
             self.imShape = None
             self.imDType = None
             self.isOpen = False
@@ -58,6 +68,12 @@ class FLAMEImage():
             self.hasFrames = False
             self.checkZs = checkZs
             self.hasZs = False
+            self.overrideNChannels = _validate_int_greater_than_zero(
+                data=overrideNChannels, logger=self.logger, accept_nonetype=True, accept_float=False
+            )
+            self.overrideNFrames = _validate_int_greater_than_zero(
+                data=overrideNFrames, logger=self.logger, accept_nonetype=True, accept_float=False
+            )
         except Exception as e:
             self.logger.error(f"Could not initialize FLAMEImage object from {impath}")
             raise FLAMEImageError(f"Could not initialize FLAMEImage object from {impath}")
@@ -92,7 +108,16 @@ class FLAMEImage():
             return self.imageData
         else:
             try:
-                return tiff.imread(self.impath)
+                im = TiffFile(self.impath)
+                assert im.is_scanimage, f"Only tiffs of type ScanImage are supported, not tiffs of type {im.flags}"
+                if self.overrideNFrames is not None: # resetting frames per slice to override
+                    im.scanimage_metadata['FrameData']['SI.hStackManager.framesPerSlice'] = self.overrideNFrames
+                    self.tileData.framesPerTile = self.overrideNFrames
+                if self.overrideNChannels is not None:
+                    im.scanimage_metadata['FrameData']['SI.hChannels.channelSave'] = self.overrideNChannels
+                    self.tileData.channelsAcquired = list(range(self.overrideNChannels))
+                im.series = im._series_scanimage()
+                return im.asarray()
             except Exception as e:
                 self.logger.error(f"Could not load tiff from {self}.\nERROR: {e}")
                 raise FLAMEImageError(f"Could not load tiff from {self}.\nERROR: {e}")
@@ -108,43 +133,51 @@ class FLAMEImage():
 
         this_dim = np.cumprod(self.imShape[:-2])[-1] # take product of all channels before XY
         try:
-            Zs = self.tileData.tileZs
+            Zs = len(self.tileData.tileZs) if isinstance(self.tileData.tileZs, np.ndarray) else self.tileData.tileZs
             frames = self.tileData.framesPerTile
             channels = len(self.tileData.channelsAcquired)
             if self.checkChannels and self.checkFrames and self.checkZs: 
                 assert this_dim == Zs * frames * channels
                 self.hasChannels, self.hasFrames, self.hasZs = True, True, True
+                self.axes_shape = "ZFCYX"
             elif self.checkChannels and self.checkFrames: # will be most common
                 assert this_dim == channels * frames
                 self.hasChannels, self.hasFrames = True, True
+                self.axes_shape = "FCYX"
             elif self.checkZs and self.checkFrames: 
                 assert this_dim == Zs * frames
                 self.hasZs, self.hasFrames = True, True
+                self.axes_shape = "ZFYX"
             elif self.checkChannels and self.checkZs:
                 assert this_dim == channels * Zs
                 self.hasChannels, self.hasZs = True, True
+                self.axes_shape = "ZCYX"
             elif self.checkChannels:
                 assert this_dim == channels
                 self.hasChannels = True
+                self.axes_shape = "CYX"
             elif self.checkFrames:
                 assert this_dim == frames
                 self.hasFrames = True
+                self.axes_shape = "FYX"
             elif self.checkZs:
                 assert this_dim == Zs
                 self.hasZs = True
+                self.axes_shape = "ZYX"
             else: # don't check anything; bad practice so raise exception
                 raise Exception(f"No dim checks provided for tiff. Cannot verify completeness.")
         except Exception as e:
             self.logger.exception(f"Could not verify completeness of tiff from {self}.\n" \
-                                  + f"Dim: {self.imShape} | Zs: {Zs} | Frames: {frames} | Channels: {channels}" \
+                                  + f"Dim: {self.imShape} | Zs: {type(Zs)} | Frames: {frames} | Channels: {channels}" \
                                   + f"\nERROR: {e}")
             raise FLAMEImageError(f"Could not verify completeness of tiff from {self}.\n" \
-                                  + f"Dim: {self.imShape} | Zs: {Zs} | Frames: {frames} | Channels: {channels}" \
+                                  + f"Dim: {self.imShape} | Zs: {type(Zs)} | Frames: {frames} | Channels: {channels}" \
                                   + f"\nERROR: {e}")
 
     def get_frames(self, start: int, end: int, op: str="add") -> np.array:
-        # assumes [Frame, Channels, X, Y] shape of tiff
+        # assumes [Frame, Channels, Y, X] shape of tiff
         try:
+            assert self.axes_shape == "FCYX", f"Axes should be of shape 'FCYX', not {self.axes_shape}"
             frames = self.raw()[start:end,...]
             
             if op == "add":
