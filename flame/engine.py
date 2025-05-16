@@ -5,9 +5,12 @@ import json
 import onnx
 import onnxruntime as ort
 from onnxruntime import InferenceSession
+import numpy as np
+from numpy.typing import NDArray
 
 from .image import FLAMEImage
 from .error import CAREInferenceError, FLAMEImageError
+from .utils import min_max_norm
 
 class CAREInferenceSession():
     def __init__(
@@ -27,7 +30,7 @@ class CAREInferenceSession():
         self._check_execution_providers(cpu_ok)
         self.model_config = self._load_json(model_config_path)
         self.input_name, self.input_shape, self.input_dtype = None, None, None
-        self.inference_session = self._load_model(model_path)
+        self.inferenceSession = self._load_model(model_path)
         self.dataset_config = self._load_json(dataset_config_path)
         self.inference_images = self._validate_FLAME_images(inference_images)
 
@@ -91,4 +94,46 @@ class CAREInferenceSession():
                 continue
         self.logger.info(f"Of {len(inference_images)} images provided, {len(new_list)} are valid for inference.")
         return new_list
+    
+    def inference_generator(self):
+        """
+        Will yield inferred-upon images one-by-one.
+        Assumes 1-99 pcttile normalization.
+        """
+        self.logger.info(f"Inference using 1-99 percentile normalization")
+        try:
+            input_min = self.dataset_config['FLAME_Dataset']['input']['pixel_1pct']
+            input_max = self.dataset_config['FLAME_Dataset']['input']['pixel_99pct']
+            self.logger.info(f"Found [{input_min}, {input_max}] for input normalization")
+            output_min = self.dataset_config['FLAME_Dataset']['output']['pixel_1pct']
+            output_max = self.dataset_config['FLAME_Dataset']['output']['pixel_99pct']
+            self.logger.info(f"Found [{output_min}, {output_max}] for output normalization")
+        except Exception as e:
+            self.logger.error(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
+            raise CAREInferenceError(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
+        
+        for image in self.inference_images:
+            try:
+                image.openImage() # loading flame image information into memory
+                raw = image.raw()
+                raw = np.clip(raw, input_min, input_max)
+                raw = min_max_norm(raw, input_min, input_max, dtype=self.input_dtype)
+                patches = self._get_patches(image.raw())
+                image.closeImage()
+
+                iobinding = self.inferenceSession.io_binding()
+                iobinding.bind_cpu_input(self.input_name, patches)
+                iobinding.bind_output('output_patches')
+                self.inferenceSession.run_with_iobinding(iobinding)
+                output_patches = iobinding.copy_outputs_to_cpu()[0]
+
+            except Exception as e:
+                self.logger.error(f"Could not infer on {image}.\nERROR: {e}\nContinuing...")
+                continue
+
+    def _get_patches(self, arr: NDArray) -> NDArray:
+        """
+        
+        """
+        pass
 

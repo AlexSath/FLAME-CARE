@@ -141,16 +141,60 @@ def _validate_is_greater_than_zero(
 
 
 
-def min_max_norm(arr: np.array, mini: Union[np.array, int, float], maxi: Union[np.array, int, float], sigma: float=1e-20) -> np.array:
+def min_max_norm(
+        arr: np.array, 
+        mini: Union[np.array, list, int, float], 
+        maxi: Union[np.array, list, int, float], 
+        sigma: float=1e-20,
+        dtype: Union[np.floating]=np.float32
+    ) -> NDArray[Union[np.floating]]:
     """
     Min-Max normalized given array based on provided 'mini' and 'maxi'
+    If mini and maxi are arrays 
     """
-    if type(mini) == np.array:
-        assert mini.ndim == 1, f"Expected array of shape (N, ) not shape {mini.shape}"
-        assert mini.shape == arr.shape or mini.shape[0] == arr.shape[-1], f"If mini/maxi are np.array, their Dim should match Arr"
-    if type(maxi) == np.array:
-        assert maxi.ndim == 1, f"Expected array of shape (N, ) not shape {maxi.shape}"
-        assert maxi.shape == arr.shape or maxi.shape[0] == arr.shape[-1], f"If mini/maxi are np.array, their Dim should match Arr"
-    assert arr.ndim <= 3, f"Input array should have 3 or fewer dimensions, not shape {arr.shape}"
-
+    if (isinstance(mini, Union[np.ndarray, list]) or
+        isinstance(maxi, Union[np.ndarray, list])):
+        return _min_max_norm_array(
+            arr=arr,
+            mini=np.array(mini),
+            maxi=np.array(maxi),
+            sigma=sigma,
+            dtype=dtype
+        )    
     return (arr - mini) / (maxi - mini + sigma)
+
+def _min_max_norm_array(
+        arr: NDArray, 
+        mini: NDArray[Union[np.floating, np.integer]], 
+        maxi: NDArray[Union[np.floating, np.integer]],
+        sigma: float=1e-20,
+        dtype: Union[np.floating]=np.float32
+    ) -> NDArray[Union[np.floating]]:
+    """
+    Min-max normalizing based on 'mini' and 'maxi' arrays.
+    If 'mini' and 'maxi' are arrays, they must be 1 dimensional, and of equal size.
+    The dimension of 'mini' and 'maxi' must match a dimension in the array 'arr'.
+    """
+    assert mini.ndim == 1 and maxi.ndim == 1
+    assert len(mini) == len(maxi)
+    assert len(mini) in arr.shape
+
+    axis = list(arr.shape).index(len(mini))
+    transpose_arr = []
+    for i in range(arr.ndim):
+        if i == axis: continue
+        transpose_arr.append(i)
+    transpose_arr.append(axis)
+
+    arr = arr.transpose(tuple(transpose_arr))
+    arr = ((arr - mini) / (maxi - mini + sigma)).astype(dtype)
+
+    new_transpose_arr = []
+    for i in range(arr.ndim - 1):
+        if i == axis: new_transpose_arr.append(arr.ndim - 1)
+        new_transpose_arr.append(i)
+    # for the case where the matching dimension is at the end (such as 'ZYXC')
+    if len(new_transpose_arr) != arr.ndim: new_transpose_arr.append(arr.ndim - 1)
+
+    return arr.transpose(tuple(new_transpose_arr))
+        
