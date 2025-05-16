@@ -2,6 +2,7 @@
 # This means they can be imported as: "from flame import TileData, FLAMEImage"
 from .tile import TileData
 from .image import FLAMEImage
+from .engine import CAREInferenceSession
 
 __all__ = [k for k in globals().keys() if not k.startswith("_")]
 
