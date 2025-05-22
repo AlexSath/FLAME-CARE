@@ -6,7 +6,11 @@ from .error import TileDataError
 from .utils import _int_or_int_array, _float_or_float_array
 
 class TileData():
-    def __init__(self, path: str) -> None:
+    def __init__(
+            self, 
+            path: str,
+            requireBidirectionalCorrection: bool=False,
+        ) -> None:
         self.logger = logging.getLogger("main")
         self.availableData = []
 
@@ -88,7 +92,18 @@ class TileData():
 
         self.logger.info("Successfully loaded all required keys from tile data JSON")
 
-        # all other known tiledata stuff is not required, so can handle any exceptions with a warning
+        # bidirectional correction is optional, but can be required if parameter set to True during TileData obj init.
+        try:
+            self.bidirectionalCorrection = int(tileData.pop('bidirectionalCorrection', None), dtype=np.integer)
+            self.availableData.append('bidirectionalCorrection')
+        except Exception as e:
+            if requireBidirectionalCorrection:
+                self.logger.exception(f"Failed to load bidirectional correction when it was required.\nEXCEPTION: {e}")
+                raise TileDataError(f"Failed to load bidirectional correction when it was required.\nEXCEPTION: {e}")
+            self.logger.warning("'bidirectionalCorrection' could not be loaded from tile data JSON")
+            self.bidirectionalCorrection = None
+
+        # all other known tiledata stuff is not required, so can handle any exceptions with a warning        
         try:
             self.tileAffine = np.array(tileData.pop('tileAffine', None), dtype=np.float32)
             self.availableData.append('tileAffine')

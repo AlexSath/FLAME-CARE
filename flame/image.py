@@ -19,7 +19,8 @@ class FLAMEImage():
             overrideNChannels: int = None,
             checkFrames: bool = True,
             overrideNFrames: int = None,
-            checkZs: bool = False
+            checkZs: bool = False,
+            requireBidirectionalCorrection: bool=False
         ) -> None:
         """
         FLAMEImage object.
@@ -60,7 +61,7 @@ class FLAMEImage():
         try:
             self.impath = impath
             self.jsonpath = self.get_json_path(jsonext)
-            self.tileData = TileData(self.jsonpath)
+            self.tileData = TileData(self.jsonpath, requireBidirectionalCorrection)
             self.imageData = None
             self.axes_shape = None
             self.imShape = None
