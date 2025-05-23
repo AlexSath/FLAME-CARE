@@ -94,13 +94,13 @@ class TileData():
 
         # bidirectional correction is optional, but can be required if parameter set to True during TileData obj init.
         try:
-            self.bidirectionalCorrection = int(tileData.pop('bidirectionalCorrection', None), dtype=np.integer)
+            self.bidirectionalCorrection = int(tileData.pop('bidirectionalCorrection', None))
             self.availableData.append('bidirectionalCorrection')
         except Exception as e:
             if requireBidirectionalCorrection:
                 self.logger.exception(f"Failed to load bidirectional correction when it was required.\nEXCEPTION: {e}")
                 raise TileDataError(f"Failed to load bidirectional correction when it was required.\nEXCEPTION: {e}")
-            self.logger.warning("'bidirectionalCorrection' could not be loaded from tile data JSON")
+            self.logger.warning(f"'bidirectionalCorrection' could not be loaded from tile data JSON.\nERROR: {e}")
             self.bidirectionalCorrection = None
 
         # all other known tiledata stuff is not required, so can handle any exceptions with a warning        
