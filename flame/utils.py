@@ -197,4 +197,16 @@ def _min_max_norm_array(
     if len(new_transpose_arr) != arr.ndim: new_transpose_arr.append(arr.ndim - 1)
 
     return arr.transpose(tuple(new_transpose_arr))
+
+
+def _apply_bidirectional_correction(img: NDArray, corr: Union[np.integer, int]):
+    if corr < 0: # shift leftwards
+        img[...,::2,np.abs(corr):] = img[...,::2,:corr]
+        img = img[...,np.abs(corr):]
+    elif corr > 0: # shift rightwards
+        img[...,::2,:-1*corr] = img[...,::2,corr:]
+        img = img[...,:-1*corr] # crop image
+    else: # case where correction is equal to 0; don't to anything.
+        pass
+    return img
         
