@@ -9,6 +9,7 @@ from tifffile import TiffFile
 from .tile import TileData
 from .error import FLAMEImageError, TileDataError
 from .utils import _validate_int_greater_than_zero
+from .utils import _apply_bidirectional_correction
 
 class FLAMEImage():
     def __init__(
@@ -115,14 +116,26 @@ class FLAMEImage():
             try:
                 im = TiffFile(self.impath)
                 assert im.is_scanimage, f"Only tiffs of type ScanImage are supported, not tiffs of type {im.flags}"
-                if self.overrideNFrames is not None: # resetting frames per slice to override
+
+                # overriding scanimage metadata to force proper output shape for the tifffile.
+                # so far, this has been seen when a FLAME Image is taken with N number of frames,
+                # but only the frame aggregate has been saved (so the true frame should be 1 instead of N).
+                if self.overrideNFrames is not None:
                     im.scanimage_metadata['FrameData']['SI.hStackManager.framesPerSlice'] = self.overrideNFrames
                     self.tileData.framesPerTile = self.overrideNFrames
                 if self.overrideNChannels is not None:
                     im.scanimage_metadata['FrameData']['SI.hChannels.channelSave'] = self.overrideNChannels
                     self.tileData.channelsAcquired = list(range(self.overrideNChannels))
-                im.series = im._series_scanimage()
-                return im.asarray()
+                if (
+                    self.overrideNChannels is not None or 
+                    self.overrideNFrames is not None
+                ): im.series = im._series_scanimage() # this is required to force an update with overridden 
+                return_image = im.asarray()
+
+                # Apply the bidirectional scanning correction if wasfound in tileData.txt
+                if 'bidirectionalCorrection' in self.tileData.availableData:
+                    return_image = _apply_bidirectional_correction(return_image, self.tileData.bidirectionalCorrection)
+                return return_image
             except Exception as e:
                 self.logger.error(f"Could not load tiff from {self}.\nERROR: {e}")
                 raise FLAMEImageError(f"Could not load tiff from {self}.\nERROR: {e}")
