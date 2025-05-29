@@ -17,6 +17,12 @@ class FLAMEDtypeError(Exception):
         self.message = message
         super().__init__(self.message)
 
+class CAREDataetError(Exception):
+    "Raise if some error occurs from a CARE dataset"
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
 class CAREInferenceError(Exception):
     "Raise if some error occurs during FLAME inference"
     def __init__(self, message):
