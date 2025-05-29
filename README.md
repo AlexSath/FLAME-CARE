@@ -6,6 +6,7 @@ CARE training and inference for FLAME microscpy
     > ./datasets/raw_image_index.csv
 
 The raw image index contains a unique index for each `.tif` available in the local file directory while provided a relative path to that file. This way, this index should be flexible to users downloading the same images to a different local filesystem with a different root directory. 
+
 2. Second, the `create_care_dataset.ipynb` notebook is run, which contains multiple functions:
     1. Calculation of aggregate pixel statistics for indexed images while reserving some IDs for a test dataset. Each unique image dataset (with its unique combination of image IDs) is provided its own config `.json` and image sample `.png` at:
         > ./datasets/<date>_<n_images>I_<model_type>_<input_frames>to<GT_frames>.json
