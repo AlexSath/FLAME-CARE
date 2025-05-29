@@ -52,7 +52,7 @@
             "pixel_std": 384.0515504138693
         },
         "output": {
-            "frames": 40,
+            "n_frames": 40,
             "pixel_mean": 2952.688675850614,
             "pixel_min": 0,
             "pixel_max": 117800,
