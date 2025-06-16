@@ -158,6 +158,12 @@ class CAREInferenceSession():
                 output_patches = iobinding.copy_outputs_to_cpu()[0]
                 output_image = self._stitch_patches(patches=output_patches, final_dim=image.imShape)
 
+                # scale output image to minimum and maximum from dataset config
+                output_image = output_image * (np.array(output_max) - np.array(output_min)) + np.array(output_min)
+
+                # rescaling from dataset config can lead to negatives and other foibles, so then rescale to 0.0-1.0
+                output_image = (output_image - output_image.min()) / (output_image.max() - output_image.min())
+
             except Exception as e:
                 self.logger.error(f"Could not infer on {image}.\nERROR: {e}\nContinuing...")
                 continue
