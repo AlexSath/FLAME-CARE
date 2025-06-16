@@ -3,7 +3,6 @@
 from .tile import TileData
 from .image import FLAMEImage
 from .engine import CAREInferenceSession
-from .model import MLFLOW_CARE_Model
 
 __all__ = [k for k in globals().keys() if not k.startswith("_")]
 
@@ -12,3 +11,4 @@ __all__ = [k for k in globals().keys() if not k.startswith("_")]
 #  - "from flame.error import TileJSONNotFoundError"
 from .error import *
 from .utils import *
+from .mlflow_pyfunc import *

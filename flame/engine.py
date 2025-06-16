@@ -18,8 +18,7 @@ class CAREInferenceSession():
             model_path: str, #onnx only, for now
             model_config_path: str,
             dataset_config_path: str,
-            inference_images: list,
-            cpu_ok: bool
+            cpu_ok: bool=False,
         ) -> None:
         """
         Class CAREInference Session
@@ -32,7 +31,6 @@ class CAREInferenceSession():
         self.input_name, self.input_shape, self.input_dtype = None, None, None
         self.inferenceSession = self._load_model(model_path)
         self.dataset_config = self._load_json(dataset_config_path)
-        self.inference_images = self._validate_FLAME_images(inference_images)
 
         assert 'CUDAExecutionProvider' in ort.get_available_providers()
 
@@ -59,6 +57,10 @@ class CAREInferenceSession():
         return json_dict
     
     def _load_model(self, model_path: str) -> InferenceSession:
+        """
+        Args:
+         - model_path: absolute path to a ".onnx" file
+        """
         try:
             assert os.path.isfile(model_path), f"Provided path {model_path} is not a file"
             onnx_model = onnx.load(model_path)
@@ -95,11 +97,13 @@ class CAREInferenceSession():
         self.logger.info(f"Of {len(inference_images)} images provided, {len(new_list)} are valid for inference.")
         return new_list
     
-    def inference_generator(self):
+    def inference_generator(self, inference_images: list[FLAMEImage]):
         """
         Will yield inferred-upon images one-by-one.
         Assumes 1-99 pcttile normalization.
         """
+        inference_images = self._validate_FLAME_images(inference_images)
+
         self.logger.info(f"Inference using 1-99 percentile normalization")
         try:
             input_min = self.dataset_config['FLAME_Dataset']['input']['pixel_1pct']
@@ -112,7 +116,7 @@ class CAREInferenceSession():
             self.logger.error(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
             raise CAREInferenceError(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
         
-        for image in self.inference_images:
+        for image in inference_images:
             try:
                 image.openImage() # loading flame image information into memory
                 raw = image.raw()
@@ -126,14 +130,119 @@ class CAREInferenceSession():
                 iobinding.bind_output('output_patches')
                 self.inferenceSession.run_with_iobinding(iobinding)
                 output_patches = iobinding.copy_outputs_to_cpu()[0]
+                output_image = self._stitch_patches(patches=output_patches, final_dim=image.imShape)
 
             except Exception as e:
                 self.logger.error(f"Could not infer on {image}.\nERROR: {e}\nContinuing...")
                 continue
 
+            yield output_image
+
+
     def _get_patches(self, arr: NDArray) -> NDArray:
         """
+        Description: _get_patches will break down an input image (as an NDArray)
+        into patches that can be inferred upon. Patch dimensions will be that of the
+        listed self.model_config -> 'patch_size' -> "Patch_Config".
+
+        Args:
+         - arr: A numpy NDArray. Should have dimensions YXC
+
+        Returns: 
+         - A numpy NDArray array of dimensions (N, patch_size, patch_size, C).
+        """
+        try:
+            patch_dim = self.model_config["Patch_Config"]['patch_size']
+        except Exception as e:
+            self.logger.error(f"Could not retrieve patch dimensions from self.model_config.\nERROR: {e}")
+            raise CAREInferenceError(f"Could not retrieve patch dimensions from self.model_config.\nERROR: {e}")
+
+        try:
+            assert len(arr.shape) == 3, f"Input dimensions must be of size 3 (YXC), not {len(arr.shape)}."
+            input_y, input_x, input_c = arr.shape
+        except Exception as e:
+            self.logger.error(f"Cannot interpret input dimensions for patch extraction.\nERROR: {e}")
+            raise CAREInferenceError(f"Cannot interpret input dimensions for patch extraction.\nERROR: {e}")
+
+        output = None
+        start_x = 0
+        start_y = 0
+        while start_y + patch_dim < input_y:
+            while start_x + patch_dim < input_x:
+                this_patch = arr[start_y:start_y+patch_dim, start_x:start_x+patch_dim, :]
+                if output is None: output = [this_patch]
+                else: output += [this_patch]
+                start_x += patch_dim
+            
+            # if x's don't go evenly into input dimension, then run code to ensure right of image is denoised..
+            if input_x % patch_dim != 0:
+                output += [arr[start_y:start_y+patch_dim, -patch_dim:, :]]
+
+            start_x = 0
+            start_y += patch_dim
+
+        # If y's don't go evenly into input dimension, then run code to ensure bottom of image is denoised.
+        if input_y % patch_dim != 0:
+            while start_x + patch_dim < input_x:
+                this_patch = arr[-patch_dim:, start_x:start_x+patch_dim, :]
+                output += [this_patch]
+                start_x += patch_dim
+            
+            if input_x % patch_dim != 0:
+                output += [arr[-patch_dim:, -patch_dim:, :]]
+
+        return np.stack(output, axis=0)
+
+
+    def _stitch_patches(self, patches: NDArray, final_dim: tuple[int]) -> NDArray:
+        """
+        Description: _stitch_patches will take a patch array of shape (N, patch_y, patch_x, C)
+        and stitch it back into a full-size image of shape 'final_dim'.
+
+        Args:
+         - patches: numpy NDArray of shape (N, patch_y, patch_x, C)
+         - final_dim: final dimensions of the image. Should match axes YXC. C in final_dim
+                      should match C in the dimension of 'patches'.
         
         """
-        pass
+        try:
+            input_y, input_x, input_c = final_dim
+        except Exception as e:
+            self.logger.error(f"Could not inppack 'final_dim' of size {len(final_dim)} into Y,X,C.\nERROR {e}")
+            raise CAREInferenceError(f"Could not inppack 'final_dim' of size {len(final_dim)} into Y,X,C.\nERROR {e}")
+        
+        assert patches.shape[-1] == input_c, f"Channels in patch array and final_dim do not match ({patches.shape[-1]} vs. {input_c})"
+
+        assert patches.shape[1] == patches.shape[2], f"Rectangular patch detected (assuming axes NYXC). Only square patches are supported"
+        patch_dim = patches.shape[1]
+
+        output = np.zeros(shape=final_dim, dtype=patches.dtype)
+        this_y = 0
+        this_x = 0
+        patch_index = 0
+        while this_y + patch_dim < final_dim[0]:
+            while this_x + patch_dim < final_dim[1]:
+                output[this_y:this_y+patch_dim, this_x:this_x+patch_dim, :] = patches[patch_index,...]
+                patch_index += 1
+                this_x += patch_dim
+
+            if final_dim[1] % patch_dim != 0:
+                output[this_y:this_y+patch_dim, -patch_dim:, :] = patches[patch_index,...]
+                patch_index += 1
+
+            this_x = 0
+            this_y += patch_dim
+
+        if final_dim[0] % patch_dim != 0:
+            while this_x + patch_dim < final_dim[1]:
+                output[-patch_dim:, this_x:this_x+patch_dim, :] = patches[patch_index,...]
+                patch_index += 1
+                this_x += patch_dim
+
+            if final_dim[1] % patch_dim != 0:
+                output[-patch_dim:, -patch_dim:, :] = patches[patch_index,...]
+                patch_index += 1
+
+        return output
+
 
