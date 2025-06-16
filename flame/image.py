@@ -208,7 +208,7 @@ class FLAMEImage():
                 start, end = start_end
                 slc = [slice(None)] * len(self.imShape)
                 slc[frame_index] = slice(start, end)
-                frames = frames[slc]
+                frames = frames[tuple(slc)]
 
             if op == "add":
                 frames = np.sum(frames, axis=frame_index)
