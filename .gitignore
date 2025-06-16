@@ -2,6 +2,9 @@
 # loggers spawned during use
 *_logger.log
 
+# file indicators for testing
+*test_model*
+
 ### DEFAULTS PROVIDED BY GITHUB
 # Byte-compiled / optimized / DLL files
 __pycache__/

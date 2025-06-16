@@ -209,4 +209,50 @@ def _apply_bidirectional_correction(img: NDArray, corr: Union[np.integer, int]):
     else: # case where correction is equal to 0; don't to anything.
         pass
     return img
+
+
+def is_iterable(obj):
+    try:
+        iter(obj)
+        return True
+    except:
+        return False
+
+
+def reduce_all(obj, rec_num, from_adx=None):
+    forbidden_types = [
+        'method-wrapper', 'str', 'wrapper_descriptor', 'object', 'type', 'code', 'NoneType', 'string',
+        '__str__', 'cell', 'function', 'method', 'builtin_function_or_method', 'int', 'float', 'bool',
+        'SymbolicArguments', 'TrackableReference', 'Function', 'ABCMeta'
+    ]
+    forbidden_attr = [
+        '__new__', '__format__', '__dir__', '__init_subclass__', '__getstate__', '__call__',
+        '__IPYTHON__', '__setattr__', '__delattr__', '__reduce_ex__', '__sizeof__', '__getnewargs__', '_tracker',
+        '__init__', '__repr__', '__str__', '__subclasshook__'
+    ]
+    if type(obj).__name__ in forbidden_types: return
+    print(f"Assessing object {obj} of type {type(obj).__name__}")
+    for adx, attr in enumerate(dir(obj)):
+        if attr in forbidden_attr: continue
+        val = getattr(obj, attr, None)
+        if type(getattr(obj, attr)).__name__ in forbidden_types: continue
+        if "__reduce__" == attr:
+            try:
+                obj.__reduce__()
+                logger.info(f"Successfully reduced obj {obj} of type {type(obj).__name__}")
+            except Exception as e:
+                raise AttributeError(f"__reduce__() failed on {obj} at {rec_num} recursions.\nERROR: {e}")
+        else:
+            if is_iterable(getattr(obj, attr, None)):
+                try:
+                    for attr_obj in getattr(obj, attr):
+                        reduce_all(attr_obj, rec_num+1, from_adx=adx)
+                except RecursionError as e:
+                    print(f"Reached recursion limit on {obj} of type {type(obj).__name__}")
+                    # print(obj.__class__)
+            else:
+                try:
+                    reduce_all(getattr(obj, attr), rec_num+1, from_adx=adx)
+                except RecursionError as e:
+                    print(f"Reached recursion limit on {obj} of type {type(obj).__name__}")
         
