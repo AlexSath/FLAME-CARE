@@ -192,17 +192,29 @@ class FLAMEImage():
                                   + f"Dim: {self.imShape} | Zs: {type(Zs)} | Frames: {frames} | Channels: {channels}" \
                                   + f"\nERROR: {e}")
 
-    def get_frames(self, start: int, end: int, op: str="add") -> np.array:
-        # assumes [Frame, Channels, Y, X] shape of tiff
+    def get_frames(self, start_end: tuple[int], op: str="add") -> np.array:
+        
         try:
-            assert self.axes_shape == "FCYX", f"Axes should be of shape 'FCYX', not {self.axes_shape}"
-            frames = self.raw()[start:end,...]
+            try:
+                frame_index = self.axes_shape.index(f"F")
+            except ValueError as e:
+                # ValueError indicates that the "F" character (and therefore the frame dimension) are not in the image
+                self.logger.warning(f"'get_frames' called, but frame dimension not found in {self}")
+                return self.raw()
             
+            frames = self.raw()
+
+            if start_end is not None:
+                start, end = start_end
+                slc = [slice(None)] * len(self.imShape)
+                slc[frame_index] = slice(start, end)
+                frames = frames[slc]
+
             if op == "add":
-                frames = np.sum(frames, axis=0)
+                frames = np.sum(frames, axis=frame_index)
             else:
                 self.logger.warning(f"Did not recognize operation {op} for frame aggregation. Performing 'addition' instead...")
-                frames = np.sum(frames, axis=0)
+                frames = np.sum(frames, axis=frame_index)
 
             assert not np.all(frames == 0)
 

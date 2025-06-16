@@ -97,6 +97,32 @@ class CAREInferenceSession():
         self.logger.info(f"Of {len(inference_images)} images provided, {len(new_list)} are valid for inference.")
         return new_list
     
+
+    def predict(self, arr: NDArray) -> NDArray:
+        """
+        Assumes array input of shape YXC or NYXC. Also assumes that input tensor to ONNX model
+        will be of shape (None, Y, X, C)
+
+        Args:
+         - arr: numpy ndarray of shape YXC or NYXC. Y and X dimensions should match Y an X of ONNX model input tensor.
+        
+        Returns: ONNX Model output
+        """
+        return self.inferenceSession.run(None, {self.input_name: arr})
+    
+
+    def predict_FLAME(self, image: FLAMEImage, input_frames: int=None) -> NDArray:
+        """
+        Takes FLAMEImage Object and infers on it using the ONNX engine.
+        Will attempt to dynamically detect FLAMEImage dimensions (ZFCYX, CYX, etc...)
+        and return corresponding denoised image.
+
+        Args:
+         - image (FLAMEImage): The FLAMEImage object to be denoised
+         - input_frames (int): The number of frames 
+        """
+
+    
     def inference_generator(self, inference_images: list[FLAMEImage]):
         """
         Will yield inferred-upon images one-by-one.
