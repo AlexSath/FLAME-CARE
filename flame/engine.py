@@ -121,7 +121,23 @@ class CAREInferenceSession():
          - image (FLAMEImage): The FLAMEImage object to be denoised
          - input_frames (int): The number of frames 
         """
-
+        frames = image.get_frames((0, input_frames) if input_frames is not None else None)
+        # move channel dimension to the end
+        try:
+            channel_idx = image.axes_shape.index("C")
+        except ValueError as e:
+            self.logger.info(f"Could not find channel dimension, so creating one...")
+            frames = frames[...,np.newaxis]
+            channel_idx = len(image.axes_shape)
+        
+        if channel_idx != len(image.axes_shape):
+            # if channel_idx is already in the last position, no need to transpose
+            transpose_shape = []
+            for idx in range(len(image.imShape)):
+                if idx == channel_idx: continue
+                transpose_shape += [idx]
+            transpose_shape += [channel_idx]
+            frames = np.transpose(frames, tuple(transpose_shape))
     
     def inference_generator(self, inference_images: list[FLAMEImage]):
         """
