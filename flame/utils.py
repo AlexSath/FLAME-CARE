@@ -6,6 +6,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .error import FLAMEDtypeError
+from . import FLAMEImage
 
 def _int_or_int_array(
         data: Any, 
@@ -216,6 +217,15 @@ def is_iterable(obj):
         iter(obj)
         return True
     except:
+        return False
+    
+
+def is_FLAME_image(self, image) -> bool:
+        try:
+            assert isinstance(image, FLAMEImage), f"Object {image} is not an instance of FLAMEImage."
+            assert image.imShape is not None, f"FLAMEImage {image} was not properly initialized."
+        except Exception as e:
+            return False
         return False
 
 
