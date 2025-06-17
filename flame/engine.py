@@ -103,7 +103,11 @@ class CAREInferenceSession():
         """
         # TODO: pre-inference normalization and post inference return to range.
         try:
-            return self.inferenceSession.run(None, {self.input_name: arr})
+            output = []
+            for cdx in range(arr.shape[-1]):
+                this_out = self.inferenceSession.run(None, {self.input_name: arr[...,[cdx]]})
+                output.append(this_out)
+            return np.stack(output, axis=-1)
         except Exception as e:
             self.logger.error(f"Could not infer on array of shape {arr.shape} and dtype {arr.dtype}.\nERROR: {e}")
             raise CAREInferenceError(f"Could not infer on array of shape {arr.shape} and dtype {arr.dtype}.\nERROR: {e}")
