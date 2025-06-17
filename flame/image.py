@@ -155,31 +155,31 @@ class FLAMEImage():
             Zs = len(self.tileData.tileZs) if isinstance(self.tileData.tileZs, np.ndarray) else self.tileData.tileZs
             frames = self.tileData.framesPerTile
             channels = len(self.tileData.channelsAcquired)
-            if self.checkChannels and self.checkFrames and self.checkZs: 
+            if self.checkChannels and self.checkFrames and self.checkZs and len(self.imShape) == 5: 
                 assert this_dim == Zs * frames * channels
                 self.hasChannels, self.hasFrames, self.hasZs = True, True, True
                 self.axes_shape = "ZFCYX"
-            elif self.checkChannels and self.checkFrames: # will be most common
+            elif self.checkChannels and self.checkFrames and len(self.imShape) == 4: # will be most common
                 assert this_dim == channels * frames
                 self.hasChannels, self.hasFrames = True, True
                 self.axes_shape = "FCYX"
-            elif self.checkZs and self.checkFrames: 
+            elif self.checkZs and self.checkFrames and len(self.imShape) == 4: 
                 assert this_dim == Zs * frames
                 self.hasZs, self.hasFrames = True, True
                 self.axes_shape = "ZFYX"
-            elif self.checkChannels and self.checkZs:
+            elif self.checkChannels and self.checkZs and len(self.imShape) == 4:
                 assert this_dim == channels * Zs
                 self.hasChannels, self.hasZs = True, True
                 self.axes_shape = "ZCYX"
-            elif self.checkChannels:
+            elif self.checkChannels and len(self.imShape) == 3:
                 assert this_dim == channels
                 self.hasChannels = True
                 self.axes_shape = "CYX"
-            elif self.checkFrames:
+            elif self.checkFrames and len(self.imShape) == 3:
                 assert this_dim == frames
                 self.hasFrames = True
                 self.axes_shape = "FYX"
-            elif self.checkZs:
+            elif self.checkZs and len(self.imShape) == 3:
                 assert this_dim == Zs
                 self.hasZs = True
                 self.axes_shape = "ZYX"
@@ -214,10 +214,10 @@ class FLAMEImage():
             
             frames = self.raw()
 
+            slc = [slice(None)] * len(self.imShape)
             if start_end is not None:
                 assert len(start_end) == 2, f"Param 'start_end' must be a tuple of length 2, not {start_end}"
                 start, end = start_end
-                slc = [slice(None)] * len(self.imShape)
                 slc[frame_index] = slice(start, end)
                 frames = frames[tuple(slc)]
 
@@ -226,6 +226,9 @@ class FLAMEImage():
             else:
                 self.logger.warning(f"Did not recognize operation {op} for frame aggregation. Performing 'addition' instead...")
                 frames = np.sum(frames, axis=frame_index)
+
+            slc[frame_index] = np.newaxis
+            frames = frames[tuple(slc)]
 
             assert not np.all(frames == 0)
 
