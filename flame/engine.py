@@ -138,6 +138,32 @@ class CAREInferenceSession():
                 transpose_shape += [idx]
             transpose_shape += [channel_idx]
             frames = np.transpose(frames, tuple(transpose_shape))
+
+        try:
+            input_min = self.dataset_config['FLAME_Dataset']['input']['pixel_1pct']
+            input_max = self.dataset_config['FLAME_Dataset']['input']['pixel_99pct']
+            self.logger.info(f"Found [{input_min}, {input_max}] for input normalization")
+            output_min = self.dataset_config['FLAME_Dataset']['output']['pixel_1pct']
+            output_max = self.dataset_config['FLAME_Dataset']['output']['pixel_99pct']
+            self.logger.info(f"Found [{output_min}, {output_max}] for output normalization")
+        except Exception as e:
+            self.logger.error(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
+            raise CAREInferenceError(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
+        
+        frames = np.clip(frames, np.array(input_min), np.array(input_max))
+        frames = min_max_norm(frames, np.array(input_min), np.array(input_max))
+
+        patches = self._get_patches(frames)
+
+        output = self.predict(patches)
+        output_image = self._stitch_patches(output, image._get_dims(axes="YXC"))
+        # scale output image to minimum and maximum from dataset config
+        output_image = output_image * (np.array(output_max) - np.array(output_min)) + np.array(output_min)
+        # rescaling from dataset config can lead to negatives and other foibles, so then rescale to 0.0-1.0
+        output_image = (output_image - output_image.min()) / (output_image.max() - output_image.min())
+
+        return output_image
+
     
     def inference_generator(self, inference_images: list[FLAMEImage]):
         """
