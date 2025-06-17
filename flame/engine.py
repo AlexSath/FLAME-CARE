@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 
 from .image import FLAMEImage
 from .error import CAREInferenceError, FLAMEImageError
-from .utils import min_max_norm, is_FLAME_image
+from .utils import min_max_norm, is_FLAME_image, _float_or_float_array
 
 class CAREInferenceSession():
     def __init__(
@@ -105,7 +105,15 @@ class CAREInferenceSession():
         return self.inferenceSession.run(None, {self.input_name: arr})
     
 
-    def predict_FLAME(self, image: FLAMEImage, input_frames: int=None) -> NDArray:
+    def predict_FLAME(
+            self, 
+            image: FLAMEImage, 
+            input_frames: int=None,
+            # input_min_override,
+            # input_max_override,
+            # output_min_override,
+            # output_max_override
+        ) -> NDArray:
         """
         Takes FLAMEImage Object and infers on it using the ONNX engine.
         Will attempt to dynamically detect FLAMEImage dimensions (ZFCYX, CYX, etc...)
@@ -113,10 +121,32 @@ class CAREInferenceSession():
 
         Args:
          - image (FLAMEImage): The FLAMEImage object to be denoised
-         - input_frames (int): The number of frames 
+         - input_frames (int): The number of frames to input into the denoising model. If none are provided,
+                               then all available frames will be used.
         """
+
+        try:
+            if self.input_min is None or self.input_max is None or self.output_min is None or self.output_max is None:
+                self.input_min = _float_or_float_array(self.dataset_config['FLAME_Dataset']['input']['pixel_1pct'])
+                self.input_max = _float_or_float_array(self.dataset_config['FLAME_Dataset']['input']['pixel_99pct'])
+                self.logger.info(f"Found [{self.input_min}, {self.input_max}] for input normalization")
+                self.output_min = _float_or_float_array(self.dataset_config['FLAME_Dataset']['output']['pixel_1pct'])
+                self.output_max = _float_or_float_array(self.dataset_config['FLAME_Dataset']['output']['pixel_99pct'])
+                self.logger.info(f"Found [{self.output_min}, {self.output_max}] for output normalization")
+        except Exception as e:
+            self.logger.error(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
+            raise CAREInferenceError(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
+        
+
         frames = image.get_frames((0, input_frames) if input_frames is not None else None)
-        # move channel dimension to the end
+
+        """NORMALIZATION OPERATIONS"""
+        # TODO: Decide what to do if the dataset statistics do not match the number of channels in the input image.
+        frames = np.clip(frames, np.array(self.input_min), np.array(self.input_max))
+        frames = min_max_norm(frames, np.array(self.input_min), np.array(self.input_max))
+        
+        """RESHAPING OPERATIONS"""
+        # detect where channel dimension is
         try:
             channel_idx = image.axes_shape.index("C")
         except ValueError as e:
@@ -124,6 +154,7 @@ class CAREInferenceSession():
             frames = frames[...,np.newaxis]
             channel_idx = len(image.axes_shape)
         
+        # transpose channel dimension to the end
         if channel_idx != len(image.axes_shape):
             # if channel_idx is already in the last position, no need to transpose
             transpose_shape = []
@@ -133,30 +164,43 @@ class CAREInferenceSession():
             transpose_shape += [channel_idx]
             frames = np.transpose(frames, tuple(transpose_shape))
 
-        try:
-            if self.input_min is None or self.input_max is None or self.output_min is None or self.output_max is None:
-                self.input_min = self.dataset_config['FLAME_Dataset']['input']['pixel_1pct']
-                self.input_max = self.dataset_config['FLAME_Dataset']['input']['pixel_99pct']
-                self.logger.info(f"Found [{self.input_min}, {self.input_max}] for input normalization")
-                self.output_min = self.dataset_config['FLAME_Dataset']['output']['pixel_1pct']
-                self.output_max = self.dataset_config['FLAME_Dataset']['output']['pixel_99pct']
-                self.logger.info(f"Found [{self.output_min}, {self.output_max}] for output normalization")
-        except Exception as e:
-            self.logger.error(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
-            raise CAREInferenceError(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
-        
-        frames = np.clip(frames, np.array(self.input_min), np.array(self.input_max))
-        frames = min_max_norm(frames, np.array(self.input_min), np.array(self.input_max))
+        # Get the current shape. Will be ...,Y,X,C
+        original_shape = frames.shape
+        # Get the new shape. Will be Z*F*N,Y,X,C
+        new_shape = (np.cumprod(frames.shape[:-3])) + frames.shape[-3:]
+        frames = np.reshape(frames, shape=new_shape)
 
-        patches = self._get_patches(frames)
+        """INFERENCE"""
+        # Getting the output
+        full_output = []
+        for n in frames: # first looping through all images stacked in the first dimension (N, Y, X, C)
+            channel_output = []
+            for cdx in range(frames.shape[-1]): # now loopoing through the channel dimensions to predict 1 by 1.
+                patches = self._get_patches(frames[...,cdx])
+                output = self.predict(patches)
+                channel_output.append(self._stitch_patches(output, image._get_dims(axes="YXC")))
+            full_output.append(np.stack(channel_output, axis=-1))
 
-        output = self.predict(patches)
-        output_image = self._stitch_patches(output, image._get_dims(axes="YXC"))
+        """REVERSAL OF RESHAPING OPERATIONS"""
+        # recreate the shape of the original frame object.
+        output_image = np.stack(full_output, axis=0)
+        output_image = np.reshape(output_image, shape = original_shape)
+
+        # move channel dimension to original position
+        new_shape = []
+        for adx in range(output_image.ndim - 1):
+            if adx == channel_idx:
+                new_shape.append(output_image.ndim - 1)
+            new_shape.append(adx)
+        output_image = np.transpose(output_image, axes=tuple(new_shape))
+
+        """REVERSAL OF NORMALIZATION OPERATIONS"""
         # scale output image to minimum and maximum from dataset config
         output_image = output_image * (np.array(self.output_max) - np.array(self.output_min)) + np.array(self.output_min)
         # rescaling from dataset config can lead to negatives and other foibles, so then rescale to 0.0-1.0
         output_image = (output_image - output_image.min()) / (output_image.max() - output_image.min())
 
+        """END"""
         return output_image
 
     
