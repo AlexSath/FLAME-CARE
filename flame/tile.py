@@ -100,7 +100,7 @@ class TileData():
             if requireBidirectionalCorrection:
                 self.logger.exception(f"Failed to load bidirectional correction when it was required.\nEXCEPTION: {e}")
                 raise TileDataError(f"Failed to load bidirectional correction when it was required.\nEXCEPTION: {e}")
-            self.logger.warning(f"'bidirectionalCorrection' could not be loaded from tile data JSON.\nERROR: {e}")
+            self.logger.warning(f"'bidirectionalCorrection' could not be loaded from tile data JSON.\nMSG: {e}")
             self.bidirectionalCorrection = None
 
         # all other known tiledata stuff is not required, so can handle any exceptions with a warning        
