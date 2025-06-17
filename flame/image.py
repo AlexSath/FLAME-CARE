@@ -4,6 +4,7 @@ import gc
 from typing import Any, Union
 
 import numpy as np
+from numpy.typing import NDArray
 from tifffile import TiffFile
 
 from .tile import TileData
@@ -192,8 +193,17 @@ class FLAMEImage():
                                   + f"Dim: {self.imShape} | Zs: {type(Zs)} | Frames: {frames} | Channels: {channels}" \
                                   + f"\nERROR: {e}")
 
-    def get_frames(self, start_end: tuple[int], op: str="add") -> np.array:
+    def get_frames(self, start_end: tuple[int], op: str="add") -> NDArray:
+        """
+        Description: Merge the frames of a FLAME image using a provided operator.
+
+        Args:
+         - start_end (tuple[int]): Must be of length 2. Starting and ending frame indices to be merged.
+         - op (str) def="add": The operation to merge the selected frames. default (and only currently accepted option) is "add" for addition.
         
+        Returns:
+         - 
+        """
         try:
             try:
                 frame_index = self.axes_shape.index(f"F")
@@ -205,6 +215,7 @@ class FLAMEImage():
             frames = self.raw()
 
             if start_end is not None:
+                assert len(start_end) == 2, f"Param 'start_end' must be a tuple of length 2, not {start_end}"
                 start, end = start_end
                 slc = [slice(None)] * len(self.imShape)
                 slc[frame_index] = slice(start, end)
@@ -223,6 +234,30 @@ class FLAMEImage():
             raise FLAMEImageError(f"Failed to get frames from {self}.\nERROR: {e}")
 
         return frames
+    
+    def _get_dims(self, axes: str) -> tuple[int]:
+        """
+        Description: get tuple of the dimensions of the requested axes.
+
+        Args:
+         - axes (str): A string of axes characters indicating the dimensions to extract. Accepted: "ZCFYX"
+
+        Returns: A tuple of integers representing the dimensions indicated in "axes" parameter
+        """
+        dims = {}
+        for cdx, c in enumerate(self.axes_shape):
+            dims[c] = self.imShape[cdx]
+        
+        ret = []
+        try:
+            for c in axes:
+                assert c in dims.keys() and c in "ZCFYX"
+                ret.append(dims[c])
+        except AssertionError as e:
+            self.logger.error(f"Could not find axis {c} in 'ZCFYX' or 'axes_shape' of {self}.")
+            raise FLAMEImageError(f"Could not find axis {c} in 'ZCFYX' or 'axes_shape' of {self}.")
+        
+        return tuple(ret)
 
     def __repr__(self) -> str:
         return f"FLAME Image @{hex(id(self))} from {self.impath}"
