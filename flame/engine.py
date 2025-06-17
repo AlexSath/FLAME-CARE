@@ -101,6 +101,7 @@ class CAREInferenceSession():
         
         Returns: ONNX Model output
         """
+        # TODO: pre-inference normalization and post inference return to range.
         return self.inferenceSession.run(None, {self.input_name: arr})
     
 
@@ -166,20 +167,29 @@ class CAREInferenceSession():
         """
 
         self.logger.info(f"Inference using 1-99 percentile normalization")
+        length = len(inference_images)
         for idx, image in enumerate(inference_images):
             if is_FLAME_image(image):
                 try:
+                    self.logger.info(f"({idx}/{length}) - Inferring on FLAMEImage {image}...")
                     res = self.predict_FLAME(
                         image=image, 
                         input_frames=FLAMEImage_input_frames
                     )
                 except Exception as e:
-                    self.logger.warning(f"Did not detect FLAMEImage for object {idx}, trying array inferrence.\nERROR: {e}")
+                    self.logger.error(f"FLAMEImage detected, but inference failed.\nERROR: {e}")
+                    raise CAREInferenceError(f"FLAMEImage detected, but inference failed.\nERROR: {e}")
             else:
-                pass
-                # TODO: FIXXX
-                
-            
+                try:
+                    self.logger.info(f"({idx}/{length}) - Inferring on array (shape: {image.shape} | dtype: {image.dtype})")
+                    res = self.predict(
+                        arr=image
+                    )
+                except Exception as e:
+                    self.logger.error(f"NDArray detected, but inference failed.\nERROR: {e}")
+                    raise CAREInferenceError(f"NDArray detected, but inference failed.\nERROR: {e}")
+        
+        return res
 
 
     def _get_patches(self, arr: NDArray) -> NDArray:
