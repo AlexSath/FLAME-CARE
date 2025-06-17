@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 
 from .image import FLAMEImage
 from .error import CAREInferenceError, FLAMEImageError
-from .utils import min_max_norm
+from .utils import min_max_norm, is_FLAME_image
 
 class CAREInferenceSession():
     def __init__(
@@ -31,6 +31,8 @@ class CAREInferenceSession():
         self.input_name, self.input_shape, self.input_dtype = None, None, None
         self.inferenceSession = self._load_model(model_path)
         self.dataset_config = self._load_json(dataset_config_path)
+        self.input_min, self.input_max = None, None
+        self.output_min, self.output_max = None, None
 
         assert 'CUDAExecutionProvider' in ort.get_available_providers()
 
@@ -80,20 +82,11 @@ class CAREInferenceSession():
             raise CAREInferenceSession(f"Could not initialize Model Inference Session.\nERROR: {e}")
         return ort_session
     
+    
     def _validate_FLAME_images(self, inference_images: list) -> dict:
         new_list = []
         for image in inference_images:
-            try:
-                try:
-                    assert isinstance(image, FLAMEImage), f"Object {image} is not an instance of FLAMEImage."
-                    assert image.imShape is not None, f"FLAMEImage {image} was not properly initialized."
-                except Exception as e:
-                    self.logger.error(f"Could not validate flame image {image}.\nERROR: {e}")
-                    raise FLAMEImageError(f"Could not validate flame image {image}.\nERROR: {e}")
-                new_list.append(image)
-            except FLAMEImageError as e:
-                self.logger.warning(f"Skipping image {image}...")
-                continue
+            if is_FLAME_image(image): new_list.append(image)
         self.logger.info(f"Of {len(inference_images)} images provided, {len(new_list)} are valid for inference.")
         return new_list
     
@@ -140,77 +133,53 @@ class CAREInferenceSession():
             frames = np.transpose(frames, tuple(transpose_shape))
 
         try:
-            input_min = self.dataset_config['FLAME_Dataset']['input']['pixel_1pct']
-            input_max = self.dataset_config['FLAME_Dataset']['input']['pixel_99pct']
-            self.logger.info(f"Found [{input_min}, {input_max}] for input normalization")
-            output_min = self.dataset_config['FLAME_Dataset']['output']['pixel_1pct']
-            output_max = self.dataset_config['FLAME_Dataset']['output']['pixel_99pct']
-            self.logger.info(f"Found [{output_min}, {output_max}] for output normalization")
+            if self.input_min is None or self.input_max is None or self.output_min is None or self.output_max is None:
+                self.input_min = self.dataset_config['FLAME_Dataset']['input']['pixel_1pct']
+                self.input_max = self.dataset_config['FLAME_Dataset']['input']['pixel_99pct']
+                self.logger.info(f"Found [{self.input_min}, {self.input_max}] for input normalization")
+                self.output_min = self.dataset_config['FLAME_Dataset']['output']['pixel_1pct']
+                self.output_max = self.dataset_config['FLAME_Dataset']['output']['pixel_99pct']
+                self.logger.info(f"Found [{self.output_min}, {self.output_max}] for output normalization")
         except Exception as e:
             self.logger.error(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
             raise CAREInferenceError(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
         
-        frames = np.clip(frames, np.array(input_min), np.array(input_max))
-        frames = min_max_norm(frames, np.array(input_min), np.array(input_max))
+        frames = np.clip(frames, np.array(self.input_min), np.array(self.input_max))
+        frames = min_max_norm(frames, np.array(self.input_min), np.array(self.input_max))
 
         patches = self._get_patches(frames)
 
         output = self.predict(patches)
         output_image = self._stitch_patches(output, image._get_dims(axes="YXC"))
         # scale output image to minimum and maximum from dataset config
-        output_image = output_image * (np.array(output_max) - np.array(output_min)) + np.array(output_min)
+        output_image = output_image * (np.array(self.output_max) - np.array(self.output_min)) + np.array(self.output_min)
         # rescaling from dataset config can lead to negatives and other foibles, so then rescale to 0.0-1.0
         output_image = (output_image - output_image.min()) / (output_image.max() - output_image.min())
 
         return output_image
 
     
-    def inference_generator(self, inference_images: list[FLAMEImage]):
+    def inference_generator(self, inference_images: list[FLAMEImage | NDArray], FLAMEImage_input_frames: int=None):
         """
         Will yield inferred-upon images one-by-one.
         Assumes 1-99 pcttile normalization.
         """
-        inference_images = self._validate_FLAME_images(inference_images)
 
         self.logger.info(f"Inference using 1-99 percentile normalization")
-        try:
-            input_min = self.dataset_config['FLAME_Dataset']['input']['pixel_1pct']
-            input_max = self.dataset_config['FLAME_Dataset']['input']['pixel_99pct']
-            self.logger.info(f"Found [{input_min}, {input_max}] for input normalization")
-            output_min = self.dataset_config['FLAME_Dataset']['output']['pixel_1pct']
-            output_max = self.dataset_config['FLAME_Dataset']['output']['pixel_99pct']
-            self.logger.info(f"Found [{output_min}, {output_max}] for output normalization")
-        except Exception as e:
-            self.logger.error(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
-            raise CAREInferenceError(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
-        
-        for image in inference_images:
-            try:
-                image.openImage() # loading flame image information into memory
-                raw = image.raw()
-                raw = np.clip(raw, input_min, input_max)
-                raw = min_max_norm(raw, input_min, input_max, dtype=self.input_dtype)
-                patches = self._get_patches(image.raw())
-                image.closeImage()
-
-                iobinding = self.inferenceSession.io_binding()
-                iobinding.bind_cpu_input(self.input_name, patches)
-                iobinding.bind_output('output_patches')
-                self.inferenceSession.run_with_iobinding(iobinding)
-                output_patches = iobinding.copy_outputs_to_cpu()[0]
-                output_image = self._stitch_patches(patches=output_patches, final_dim=image.imShape)
-
-                # scale output image to minimum and maximum from dataset config
-                output_image = output_image * (np.array(output_max) - np.array(output_min)) + np.array(output_min)
-
-                # rescaling from dataset config can lead to negatives and other foibles, so then rescale to 0.0-1.0
-                output_image = (output_image - output_image.min()) / (output_image.max() - output_image.min())
-
-            except Exception as e:
-                self.logger.error(f"Could not infer on {image}.\nERROR: {e}\nContinuing...")
-                continue
-
-            yield output_image
+        for idx, image in enumerate(inference_images):
+            if is_FLAME_image(image):
+                try:
+                    res = self.predict_FLAME(
+                        image=image, 
+                        input_frames=FLAMEImage_input_frames
+                    )
+                except Exception as e:
+                    self.logger.warning(f"Did not detect FLAMEImage for object {idx}, trying array inferrence.\nERROR: {e}")
+            else:
+                pass
+                # TODO: FIXXX
+                
+            
 
 
     def _get_patches(self, arr: NDArray) -> NDArray:
