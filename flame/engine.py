@@ -8,9 +8,9 @@ from onnxruntime import InferenceSession
 import numpy as np
 from numpy.typing import NDArray
 
-from .image import FLAMEImage
+from .image import FLAMEImage, is_FLAME_image
 from .error import CAREInferenceError, FLAMEImageError
-from .utils import min_max_norm, is_FLAME_image, _float_or_float_array
+from .utils import min_max_norm, _float_or_float_array
 
 class CAREInferenceSession():
     def __init__(
@@ -24,7 +24,7 @@ class CAREInferenceSession():
         Class CAREInference Session
         
         """
-        self.logger = logging.getLogger("main")
+        self.logger = logging.getLogger("CareInference")
         self.execution_providers = None
         self._check_execution_providers(cpu_ok)
         self.model_config = self._load_json(model_config_path)
@@ -102,7 +102,11 @@ class CAREInferenceSession():
         Returns: ONNX Model output
         """
         # TODO: pre-inference normalization and post inference return to range.
-        return self.inferenceSession.run(None, {self.input_name: arr})
+        try:
+            return self.inferenceSession.run(None, {self.input_name: arr})
+        except Exception as e:
+            self.logger.error(f"Could not infer on array of shape {arr.shape} and dtype {arr.dtype}.\nERROR: {e}")
+            raise CAREInferenceError(f"Could not infer on array of shape {arr.shape} and dtype {arr.dtype}.\nERROR: {e}")
     
 
     def predict_FLAME(
@@ -137,13 +141,15 @@ class CAREInferenceSession():
             self.logger.error(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
             raise CAREInferenceError(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
         
-
-        frames = image.get_frames((0, input_frames) if input_frames is not None else None)
-
-        """NORMALIZATION OPERATIONS"""
-        # TODO: Decide what to do if the dataset statistics do not match the number of channels in the input image.
-        frames = np.clip(frames, np.array(self.input_min), np.array(self.input_max))
-        frames = min_max_norm(frames, np.array(self.input_min), np.array(self.input_max))
+        try:
+            frames_idx = image.axes_shape.index("F")
+            frames = image.get_frames((0, input_frames) if input_frames is not None else None)
+            frame_dim_created = False
+        except ValueError as e: # indicates frame dimension was not found.
+            # create a frames dimension at the beginning
+            frames = image.raw()[np.newaxis,...]
+            image.axes_shape = "F" + image.axes_shape
+            frame_dim_created = True
         
         """RESHAPING OPERATIONS"""
         # detect where channel dimension is
@@ -152,23 +158,31 @@ class CAREInferenceSession():
         except ValueError as e:
             self.logger.info(f"Could not find channel dimension, so creating one...")
             frames = frames[...,np.newaxis]
-            channel_idx = len(image.axes_shape)
+            image.axes_shape = image.axes_shape + "C"
+            channel_idx = len(image.axes_shape-1)
         
         # transpose channel dimension to the end
-        if channel_idx != len(image.axes_shape):
+        if channel_idx != len(image.axes_shape) - 1:
             # if channel_idx is already in the last position, no need to transpose
             transpose_shape = []
-            for idx in range(len(image.imShape)):
+            for idx in range(frames.ndim):
                 if idx == channel_idx: continue
                 transpose_shape += [idx]
             transpose_shape += [channel_idx]
+            print(transpose_shape)
             frames = np.transpose(frames, tuple(transpose_shape))
 
         # Get the current shape. Will be ...,Y,X,C
         original_shape = frames.shape
         # Get the new shape. Will be Z*F*N,Y,X,C
-        new_shape = (np.cumprod(frames.shape[:-3])) + frames.shape[-3:]
+        new_shape = tuple(np.cumprod(frames.shape[:-3])) + (frames.shape[-3:]) # if frames.ndim > 3 else frames.shape
+        print(new_shape)
         frames = np.reshape(frames, shape=new_shape)
+
+        """NORMALIZATION OPERATIONS"""
+        # TODO: Decide what to do if the dataset statistics do not match the number of channels in the input image.
+        frames = np.clip(frames, np.array(self.input_min), np.array(self.input_max))
+        frames = min_max_norm(frames, np.array(self.input_min), np.array(self.input_max))
 
         """INFERENCE"""
         # Getting the output
@@ -176,7 +190,7 @@ class CAREInferenceSession():
         for n in frames: # first looping through all images stacked in the first dimension (N, Y, X, C)
             channel_output = []
             for cdx in range(frames.shape[-1]): # now loopoing through the channel dimensions to predict 1 by 1.
-                patches = self._get_patches(frames[...,cdx])
+                patches = self._get_patches(n[...,[cdx]]) # keep dimension while indexing
                 output = self.predict(patches)
                 channel_output.append(self._stitch_patches(output, image._get_dims(axes="YXC")))
             full_output.append(np.stack(channel_output, axis=-1))
@@ -201,7 +215,11 @@ class CAREInferenceSession():
         output_image = (output_image - output_image.min()) / (output_image.max() - output_image.min())
 
         """END"""
-        return output_image
+        if frame_dim_created:
+            image.axes_shape = image.axes_shape[1:]
+            return output_image[0,...]
+        else:
+            return output_image
 
     
     def inference_generator(self, inference_images: list[FLAMEImage | NDArray], FLAMEImage_input_frames: int=None):
