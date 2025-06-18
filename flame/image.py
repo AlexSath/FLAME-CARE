@@ -216,7 +216,8 @@ class FLAMEImage():
 
             slc = [slice(None)] * len(self.imShape)
             if start_end is not None:
-                assert len(start_end) == 2, f"Param 'start_end' must be a tuple of length 2, not {start_end}"
+                assert type(start_end) == tuple, f"Param 'start_end' must be a tuple, not {type(start_end)}."
+                assert len(start_end) == 2, f"Param 'start_end' must be a tuple of length 2, not {start_end}."
                 start, end = start_end
                 slc[frame_index] = slice(start, end)
                 frames = frames[tuple(slc)]
