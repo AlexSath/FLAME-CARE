@@ -140,7 +140,6 @@ def _validate_is_greater_than_zero(
     return data
 
 
-
 def min_max_norm(
         arr: np.array, 
         mini: Union[np.array, list, int, float], 
@@ -217,6 +216,52 @@ def is_iterable(obj):
         return True
     except:
         return False
+    
+
+def _compress_dict_fields(data: dict) -> dict:
+    """
+    Description: Convert a many-dimensional dictionary into a single-dimensional dictionary.
+
+    Example:
+    my_dict = {
+        'A': {
+            '1': 'foo',
+            '2': {
+                'p': 'bar',
+                'q': 'lorem'
+            }
+        },
+        'B': 'ipsum'
+    }
+
+    _compress_dict_fields(my_dict) -> {
+        'A-1': 'foo',
+        'A-2-p': 'bar',
+        'A-2-q': 'lorem',
+        'B': 'ipsum'
+    }
+    """
+    new_data = {}
+    for k, v in data.items():
+        assert '-' not in k, f"Compression mechanism relies on '-' as separator. Remove '-' from {k} and try again!"
+        if isinstance(v, dict):
+            sub_data = _compress_dict_fields(v)
+            for sub_k, sub_v in sub_data.items():
+                new_data[f"{k}-{sub_k}"] = sub_v
+        else:
+            new_data[k] = v
+    return new_data
+
+
+def _expand_dict_fields(data: dict) -> dict:
+    """
+    Description: Reverse of _compress_dict_fields().
+    """
+    new_data = {}
+    for k, v in data.items():
+        split = k.split('-')
+        for s in split[::-1]:
+            pass
 
 
 def reduce_all(obj, rec_num, from_adx=None):
@@ -239,7 +284,7 @@ def reduce_all(obj, rec_num, from_adx=None):
         if "__reduce__" == attr:
             try:
                 obj.__reduce__()
-                logger.info(f"Successfully reduced obj {obj} of type {type(obj).__name__}")
+                # logger.info(f"Successfully reduced obj {obj} of type {type(obj).__name__}")
             except Exception as e:
                 raise AttributeError(f"__reduce__() failed on {obj} at {rec_num} recursions.\nERROR: {e}")
         else:
