@@ -2,6 +2,7 @@
     "FLAME_Dataset": {
         "name": "20250527_112I_denoising_5to40F",
         "type": "denoising",
+        "id": "0x0002",
         "image_shapes": [
             [
                 3,

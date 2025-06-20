@@ -1,6 +1,6 @@
 import numpy as np
 
-from flame.error import CAREEvalError
+from flame.error import FLAMEEvalError
 
 def mae():
     pass
