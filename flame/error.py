@@ -17,7 +17,7 @@ class FLAMEDtypeError(Exception):
         self.message = message
         super().__init__(self.message)
 
-class CAREEvalError(Exception):
+class FLAMEEvalError(Exception):
     "Raise if some error occurs during FLAME model evaluation"
     def __init__(self, message):
         self.message = message

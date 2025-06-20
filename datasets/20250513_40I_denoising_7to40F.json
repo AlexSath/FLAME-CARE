@@ -2,6 +2,7 @@
     "FLAME_Dataset": {
         "name": "20250513_40I_denoising_7to40F",
         "type": "denoising",
+        "id": "0x0001",
         "input": {
             "n_frames": 7,
             "pixel_mean": 482.47699672453706,
