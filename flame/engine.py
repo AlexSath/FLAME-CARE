@@ -1,12 +1,13 @@
-import os
-import logging
-import json
+import os, logging, json, glob
+from shutil import rmtree
+from typing import Union
 
 import onnx
 import onnxruntime as ort
 from onnxruntime import InferenceSession
 import numpy as np
 from numpy.typing import NDArray
+import mlflow.artifacts as artifacts
 
 from .image import FLAMEImage, is_FLAME_image
 from .error import CAREInferenceError, FLAMEImageError
@@ -35,6 +36,60 @@ class CAREInferenceSession():
         self.output_min, self.output_max = None, None
 
         assert 'CUDAExecutionProvider' in ort.get_available_providers()
+
+    @classmethod
+    def from_mlflow_uri(
+        cls,
+        tracking_uri: str,
+        run_id: str,
+        model_artifact_path: str="model",
+        config_artifact_path: str="model_config",
+        model_name: str="model.onnx",
+        json_name: str="model_config.json",
+        cpu_ok: bool=False
+    ):
+        logger = logging.getLogger("CareInference")
+        temp_direc = os.path.join(os.getcwd(), "temp")
+        os.makedirs(temp_direc, exist_ok=True)
+
+        try:
+            artifacts.download_artifacts(
+                tracking_uri=tracking_uri,
+                run_id=run_id,
+                artifact_path=model_artifact_path,
+                dst_path=temp_direc
+            )
+        except Exception as e:
+            logger.error(f"Could not load '{model_artifact_path}' path from mlflow run of id {run_id}.\nEXCEPTION: {e}")
+            raise CAREInferenceError(f"Could not load '{model_artifact_path}' path from mlflow run of id {run_id}.\nEXCEPTION: {e}")
+        
+        try:
+            artifacts.download_artifacts(
+                tracking_uri=tracking_uri,
+                run_id=run_id,
+                artifact_path=config_artifact_path,
+                dst_path=temp_direc
+            )
+        except Exception as e:
+            logger.error(f"Could not load '{config_artifact_path}' path from mlflow run of id {run_id}.\nEXCEPTION: {e}")
+            raise CAREInferenceError(f"Could not load '{config_artifact_path}' path from mlflow run of id {run_id}.\nEXCEPTION: {e}")
+        
+        try:
+            model_path = glob.glob(os.path.join(temp_direc, "**", model_name), recursive=True)
+            json_path = glob.glob(os.path.join(temp_direc, "**", json_name), recursive=True)
+            assert len(model_path) == 1 and len(json_path) == 1, f"Expected to found 1 model and one json, not {len(model_path)} and {len(json_path)}, respectively."
+            model_path, json_path = model_path[0], json_path[0]
+            obj=cls(
+                model_path=model_path, 
+                model_config_path=json_path,
+                dataset_config_path=json_path,
+            )
+            rmtree(temp_direc)
+            return obj
+        except Exception as e:
+            logger.error(f"Could not initialize CAREInferenceSession object.\nEXCEPTION: {e}")
+            raise CAREInferenceError(f"Could not initialize CAREInferenceSession object.\nEXCEPTION: {e}")
+
 
     def _check_execution_providers(self, cpu_ok: bool) -> None:
         """
