@@ -1,4 +1,5 @@
-import os, logging, json, glob
+import os, logging, json, glob, gc
+from time import time
 from shutil import rmtree
 from typing import Union
 
@@ -32,10 +33,20 @@ class CAREInferenceSession():
         self.input_name, self.input_shape, self.input_dtype = None, None, None
         self.inferenceSession = self._load_model(model_path)
         self.dataset_config = self._load_json(dataset_config_path)
-        self.input_min, self.input_max = None, None
-        self.output_min, self.output_max = None, None
 
-        assert 'CUDAExecutionProvider' in ort.get_available_providers()
+        try:
+            self.input_min = _float_or_float_array(self.dataset_config['FLAME_Dataset']['input']['pixel_1pct'])
+            self.input_max = _float_or_float_array(self.dataset_config['FLAME_Dataset']['input']['pixel_99pct'])
+            self.logger.info(f"Found [{self.input_min}, {self.input_max}] for input normalization")
+            self.output_min = _float_or_float_array(self.dataset_config['FLAME_Dataset']['output']['pixel_1pct'])
+            self.output_max = _float_or_float_array(self.dataset_config['FLAME_Dataset']['output']['pixel_99pct'])
+            self.logger.info(f"Found [{self.output_min}, {self.output_max}] for output normalization")
+        except Exception as e:
+            self.logger.error(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
+            raise CAREInferenceError(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
+
+        if not cpu_ok:
+            assert 'CUDAExecutionProvider' in ort.get_available_providers()
 
     @classmethod
     def from_mlflow_uri(
@@ -99,7 +110,7 @@ class CAREInferenceSession():
         try:
             providers = ort.get_available_providers()
             if not cpu_ok: assert "CUDAExecutionProvider" in providers, f"CUDA not available, and 'cpu_ok' is False."
-            else: self.execution_providers = providers
+            self.execution_providers = providers
         except Exception as e:
             self.logger.error(f"Could not validate available execution providers with 'cpu_ok' set to {cpu_ok}")
             raise CAREInferenceError(f"Could not validate available execution providers with 'cpu_ok' set to {cpu_ok}")
@@ -148,24 +159,65 @@ class CAREInferenceSession():
 
     def predict(self, arr: NDArray) -> NDArray:
         """
-        Assumes array input of shape YXC or NYXC. Also assumes that input tensor to ONNX model
-        will be of shape (None, Y, X, C)
+        Assumes array input of shape NYXC. Will break Y and X dimension into patches necessary for
+        inference by the ONNX model in this inference session.
 
         Args:
-         - arr: numpy ndarray of shape YXC or NYXC. Y and X dimensions should match Y an X of ONNX model input tensor.
+         - arr: numpy ndarray of shape NYXC
         
-        Returns: ONNX Model output
+        Returns: Denoised image of shape NYXC
         """
-        # TODO: pre-inference normalization and post inference return to range.
+        assert arr.ndim == 4, f"Input array must have 4 dimensions, not {arr.ndim} dimensions of size {arr.shape}"
+        input_dim = arr.shape
+        input_dtype = arr.dtype
+        initial_YXC = list(arr.shape[1:-1]) + [1]
+        
+        """NORMALIZATION OPERATIONS"""
+        # TODO: Decide what to do if the dataset statistics do not match the number of channels in the input image.
+        arr = np.clip(arr, np.array(self.input_min), np.array(self.input_max))
+        arr = min_max_norm(arr, np.array(self.input_min), np.array(self.input_max))
+        
+        """INFERENCE"""
         try:
-            output = []
-            for cdx in range(arr.shape[-1]):
-                this_out = self.inferenceSession.run(None, {self.input_name: arr[...,[cdx]]})
-                output.append(this_out)
-            return np.stack(output, axis=-1)
+            full_output = None
+            for n in arr: # first looping through all images stacked in the first dimension (N, Y, X, C)
+                # channel_output = []
+                channel_output = None
+                for cdx in range(arr.shape[-1]): # now loopoing through the channel dimensions to predict 1 by 1.
+                    patches = self._get_patches(n[...,[cdx]]) # keep dimension while indexing
+                    try:
+                        t1 = time()
+                        output = self.inferenceSession.run(None, {'patch': patches})[0]
+                        t2 = time()
+                        self.logger.info(f"Inference on patches of shape {patches.shape} and dtype {patches.dtype} took {t2 - t1:.2f}s")
+                    except Exception as e:
+                        self.logger.error(f"Inference session failed to predict on patches of dim {patches.shape} and dtype {patches.dtype}")
+                        raise RuntimeError(f"Inference session failed to predict on patches of dim {patches.shape} and dtype {patches.dtype}")
+                    
+                    output = self._stitch_patches(output, initial_YXC)
+                    if channel_output is None: channel_output = output
+                    else: channel_output = np.concat([channel_output, output], axis=-1)
+                    # channel_output.append(self._stitch_patches(output, initial_YX + [1]))
+                if full_output is None: full_output = channel_output[np.newaxis,...]
+                else: full_output = np.concat([full_output, channel_output[np.newaxis,...]], axis=0)
+                # if len(channel_output) > 1: full_output.append(np.concat(channel_output, axis=2))
+                # elif len(channel_output) == 1: full_output.append(channel_output[0][...,np.newaxis])
+                # else: raise ValueError(f"Found nothing in 'channel_output' to stack.")
+
+            # if len(full_output) > 1: output_image = np.stack(full_output, axis=0)
+            # elif len(full_output) == 1: output_image = full_output[0][np.newaxis,...]
+            # else: raise ValueError(f"Found nothing in 'full_output' to stack.")
+        
         except Exception as e:
-            self.logger.error(f"Could not infer on array of shape {arr.shape} and dtype {arr.dtype}.\nERROR: {e}")
-            raise CAREInferenceError(f"Could not infer on array of shape {arr.shape} and dtype {arr.dtype}.\nERROR: {e}")
+            self.logger.error(f"Could not infer on array of shape {input_dim} and dtype {input_dtype}.\nERROR: {e}")
+            raise CAREInferenceError(f"Could not infer on array of shape {input_dim} and dtype {input_dtype}.\nERROR: {e}")
+        
+        """RENORMALIZATION TO OUTPUT PIXEL DISTRIBUTION"""
+        full_output = min_max_norm(full_output, mini=0, maxi=1)
+        full_output = (full_output * (self.output_max - self.output_min)) + self.output_min
+
+        """END"""
+        return full_output
     
 
     def predict_FLAME(
@@ -186,40 +238,35 @@ class CAREInferenceSession():
          - image (FLAMEImage): The FLAMEImage object to be denoised
          - input_frames (int): The number of frames to input into the denoising model. If none are provided,
                                then all available frames will be used.
-        """
 
-        try:
-            if self.input_min is None or self.input_max is None or self.output_min is None or self.output_max is None:
-                self.input_min = _float_or_float_array(self.dataset_config['FLAME_Dataset']['input']['pixel_1pct'])
-                self.input_max = _float_or_float_array(self.dataset_config['FLAME_Dataset']['input']['pixel_99pct'])
-                self.logger.info(f"Found [{self.input_min}, {self.input_max}] for input normalization")
-                self.output_min = _float_or_float_array(self.dataset_config['FLAME_Dataset']['output']['pixel_1pct'])
-                self.output_max = _float_or_float_array(self.dataset_config['FLAME_Dataset']['output']['pixel_99pct'])
-                self.logger.info(f"Found [{self.output_min}, {self.output_max}] for output normalization")
-        except Exception as e:
-            self.logger.error(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
-            raise CAREInferenceError(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
+        Returns: Numpy NDArray with denoised FLAMEImage data. Will match dimensions of input FLAMEImage.
+        """
         
+        """ENSURING: Frame and Channel dims exist, getting indicated frames."""
         try:
             frames_idx = image.axes_shape.index("F")
             frames = image.get_frames((0, input_frames) if input_frames is not None else None)
             frame_dim_created = False
         except ValueError as e: # indicates frame dimension was not found.
+            # if frame dimension was not found, ensure user did not asked for either 1 frame or all frames
+            assert input_frames is None or input_frames == 1, f"User asked for 1 frame or all frames for inference, but no frame dimension was found in {image}"
             # create a frames dimension at the beginning
             frames = image.raw()[np.newaxis,...]
             image.axes_shape = "F" + image.axes_shape
             frame_dim_created = True
         
-        """RESHAPING OPERATIONS"""
         # detect where channel dimension is
         try:
             channel_idx = image.axes_shape.index("C")
+            channel_dim_created = False
         except ValueError as e:
             self.logger.info(f"Could not find channel dimension, so creating one...")
             frames = frames[...,np.newaxis]
             image.axes_shape = image.axes_shape + "C"
+            channel_dim_created = True
             channel_idx = len(image.axes_shape-1)
-        
+
+        """RESHAPING OPERATIONS"""
         # transpose channel dimension to the end
         if channel_idx != len(image.axes_shape) - 1:
             # if channel_idx is already in the last position, no need to transpose
@@ -235,28 +282,13 @@ class CAREInferenceSession():
         original_shape = frames.shape
         # Get the new shape. Will be Z*F*N,Y,X,C
         new_shape = tuple(np.cumprod(frames.shape[:-3])) + (frames.shape[-3:]) # if frames.ndim > 3 else frames.shape
-        print(new_shape)
         frames = np.reshape(frames, shape=new_shape)
 
-        """NORMALIZATION OPERATIONS"""
-        # TODO: Decide what to do if the dataset statistics do not match the number of channels in the input image.
-        frames = np.clip(frames, np.array(self.input_min), np.array(self.input_max))
-        frames = min_max_norm(frames, np.array(self.input_min), np.array(self.input_max))
-
         """INFERENCE"""
-        # Getting the output
-        full_output = []
-        for n in frames: # first looping through all images stacked in the first dimension (N, Y, X, C)
-            channel_output = []
-            for cdx in range(frames.shape[-1]): # now loopoing through the channel dimensions to predict 1 by 1.
-                patches = self._get_patches(n[...,[cdx]]) # keep dimension while indexing
-                output = self.predict(patches)
-                channel_output.append(self._stitch_patches(output, image._get_dims(axes="YXC")))
-            full_output.append(np.stack(channel_output, axis=-1))
-
+        output_image = self.predict(frames)
+        
         """REVERSAL OF RESHAPING OPERATIONS"""
         # recreate the shape of the original frame object.
-        output_image = np.stack(full_output, axis=0)
         output_image = np.reshape(output_image, shape = original_shape)
 
         # move channel dimension to original position
@@ -267,18 +299,17 @@ class CAREInferenceSession():
             new_shape.append(adx)
         output_image = np.transpose(output_image, axes=tuple(new_shape))
 
-        """REVERSAL OF NORMALIZATION OPERATIONS"""
-        # scale output image to minimum and maximum from dataset config
-        output_image = output_image * (np.array(self.output_max) - np.array(self.output_min)) + np.array(self.output_min)
-        # rescaling from dataset config can lead to negatives and other foibles, so then rescale to 0.0-1.0
-        output_image = (output_image - output_image.min()) / (output_image.max() - output_image.min())
-
-        """END"""
+        """REMOVE ADDED DIMENSIONS"""
         if frame_dim_created:
             image.axes_shape = image.axes_shape[1:]
-            return output_image[0,...]
-        else:
-            return output_image
+            output_image = output_image[0,...]
+
+        if channel_dim_created:
+            image.axes_shape = image.axes_shape[:-1]
+            output_image = output_image[...,0]
+        
+        """END"""
+        return output_image
 
     
     def inference_generator(self, inference_images: list[FLAMEImage | NDArray], FLAMEImage_input_frames: int=None):
