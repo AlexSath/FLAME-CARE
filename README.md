@@ -1,2 +1,2 @@
 # BaluLab-CARE
-CARE training and inference for FLAME microscpy
+CARE training and inference for the FLAME microscope.
