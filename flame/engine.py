@@ -42,8 +42,8 @@ class CAREInferenceSession():
             self.output_max = _float_or_float_array(self.dataset_config['FLAME_Dataset']['output']['pixel_99pct'])
             self.logger.info(f"Found [{self.output_min}, {self.output_max}] for output normalization")
         except Exception as e:
-            self.logger.error(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
-            raise CAREInferenceError(f"Could not load normalization data from Dataset Config.\nERROR: {e}")
+            self.logger.error(f"Could not load normalization data from Dataset Config.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Could not load normalization data from Dataset Config.\n{e.__class__.__name__}: {e}")
 
         if not cpu_ok:
             assert 'CUDAExecutionProvider' in ort.get_available_providers()
@@ -120,8 +120,8 @@ class CAREInferenceSession():
             assert os.path.isfile(json_path), f"Provided path {json_path} is not a file."
             json_dict = json.load(open(json_path, 'r'))
         except Exception as e:
-            self.logger.error(f"Could not load json from {json_path}.\nERROR: {e}")
-            raise CAREInferenceError(f"Could not load json from {json_path}.\nERROR: {e}")
+            self.logger.error(f"Could not load json from {json_path}.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Could not load json from {json_path}.\n{e.__class__.__name__}: {e}")
         return json_dict
     
     def _load_model(self, model_path: str) -> InferenceSession:
@@ -144,8 +144,8 @@ class CAREInferenceSession():
             self.input_name, self.input_shape, self.input_dtype = input_tensor.name, input_tensor.shape, input_tensor.type
             self.logger.info(f"Model input: Name-{self.input_name} | Shape-{self.input_shape} | DType-{self.input_dtype}")
         except Exception as e:
-            self.logger.error(f"Could not initialize Model Inference Session.\nERROR: {e}")
-            raise CAREInferenceSession(f"Could not initialize Model Inference Session.\nERROR: {e}")
+            self.logger.error(f"Could not initialize Model Inference Session.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceSession(f"Could not initialize Model Inference Session.\n{e.__class__.__name__}: {e}")
         return ort_session
     
     
@@ -167,50 +167,58 @@ class CAREInferenceSession():
         
         Returns: Denoised image of shape NYXC
         """
-        assert arr.ndim == 4, f"Input array must have 4 dimensions, not {arr.ndim} dimensions of size {arr.shape}"
+        assert arr.ndim == 4, f"Input array must have 4 dimensions, not {arr.ndim} dimensions of shape {arr.shape}"
+        SINGLE_CHANNEL_INFER = True # In the beginning, assume that each channel will be inferred upon one-by-one.
+        if self.input_shape[-1] != 1: # if the ONNX input shape is not 1, that means the model was trained for a specific number of channels.
+            assert arr.shape[-1] == self.input_shape[-1], f"Array channel dim {arr.shape[-1]} does not match ONNX input channel dim {self.input_shape[-1]} (assumption: NYXC)."
+            SINGLE_CHANNEL_INFER = False
+            self.logger.info(f"Detected multiple channel inference. Inferring on all channels at the same time.")
+        else: self.logger.info(f"Detected single channel inference. Running inference on each channel one-at-a-time.")
+        
         input_dim = arr.shape
         input_dtype = arr.dtype
-        initial_YXC = list(arr.shape[1:-1]) + [1]
+        if SINGLE_CHANNEL_INFER: initial_YXC = list(arr.shape[1:-1]) + [1]
+        else: initial_YXC = list(arr.shape[1:])
         
         """NORMALIZATION OPERATIONS"""
         # TODO: Decide what to do if the dataset statistics do not match the number of channels in the input image.
         arr = np.clip(arr, np.array(self.input_min), np.array(self.input_max))
         arr = min_max_norm(arr, np.array(self.input_min), np.array(self.input_max))
-        
+
         """INFERENCE"""
+        def run_on_patches(patches):
+            try:
+                t1 = time()
+                output = self.inferenceSession.run(None, {'patch': patches})[0]
+                t2 = time()
+                self.logger.info(f"Inference on patches of shape {patches.shape} and dtype {patches.dtype} took {t2 - t1:.2f}s")
+                return output
+            except Exception as e:
+                self.logger.error(f"Inference session failed to predict on patches of dim {patches.shape} and dtype {patches.dtype}")
+                raise RuntimeError(f"Inference session failed to predict on patches of dim {patches.shape} and dtype {patches.dtype}")
+        
         try:
             full_output = None
             for n in arr: # first looping through all images stacked in the first dimension (N, Y, X, C)
-                # channel_output = []
                 channel_output = None
-                for cdx in range(arr.shape[-1]): # now loopoing through the channel dimensions to predict 1 by 1.
-                    patches = self._get_patches(n[...,[cdx]]) # keep dimension while indexing
-                    try:
-                        t1 = time()
-                        output = self.inferenceSession.run(None, {'patch': patches})[0]
-                        t2 = time()
-                        self.logger.info(f"Inference on patches of shape {patches.shape} and dtype {patches.dtype} took {t2 - t1:.2f}s")
-                    except Exception as e:
-                        self.logger.error(f"Inference session failed to predict on patches of dim {patches.shape} and dtype {patches.dtype}")
-                        raise RuntimeError(f"Inference session failed to predict on patches of dim {patches.shape} and dtype {patches.dtype}")
-                    
-                    output = self._stitch_patches(output, initial_YXC)
-                    if channel_output is None: channel_output = output
-                    else: channel_output = np.concat([channel_output, output], axis=-1)
-                    # channel_output.append(self._stitch_patches(output, initial_YX + [1]))
+                if SINGLE_CHANNEL_INFER:
+                    for cdx in range(arr.shape[-1]): # now loopoing through the channel dimensions to predict 1 by 1.
+                        patches = self._get_patches(n[...,[cdx]]) # keep channel dimension while indexing
+                        output = run_on_patches(patches)
+                        output = self._stitch_patches(output, initial_YXC)
+                        if channel_output is None: channel_output = output
+                        else: channel_output = np.concat([channel_output, output], axis=-1)
+                else:
+                    patches = self._get_patches(n)
+                    channel_output = run_on_patches(patches)
+                    channel_output = self._stitch_patches(channel_output, initial_YXC)
+
                 if full_output is None: full_output = channel_output[np.newaxis,...]
                 else: full_output = np.concat([full_output, channel_output[np.newaxis,...]], axis=0)
-                # if len(channel_output) > 1: full_output.append(np.concat(channel_output, axis=2))
-                # elif len(channel_output) == 1: full_output.append(channel_output[0][...,np.newaxis])
-                # else: raise ValueError(f"Found nothing in 'channel_output' to stack.")
-
-            # if len(full_output) > 1: output_image = np.stack(full_output, axis=0)
-            # elif len(full_output) == 1: output_image = full_output[0][np.newaxis,...]
-            # else: raise ValueError(f"Found nothing in 'full_output' to stack.")
         
         except Exception as e:
-            self.logger.error(f"Could not infer on array of shape {input_dim} and dtype {input_dtype}.\nERROR: {e}")
-            raise CAREInferenceError(f"Could not infer on array of shape {input_dim} and dtype {input_dtype}.\nERROR: {e}")
+            self.logger.error(f"Could not infer on array of shape {input_dim} and dtype {input_dtype}.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Could not infer on array of shape {input_dim} and dtype {input_dtype}.\n{e.__class__.__name__}: {e}")
         
         """RENORMALIZATION TO OUTPUT PIXEL DISTRIBUTION"""
         full_output = min_max_norm(full_output, mini=0, maxi=1)
@@ -329,8 +337,8 @@ class CAREInferenceSession():
                         input_frames=FLAMEImage_input_frames
                     )
                 except Exception as e:
-                    self.logger.error(f"FLAMEImage detected, but inference failed.\nERROR: {e}")
-                    raise CAREInferenceError(f"FLAMEImage detected, but inference failed.\nERROR: {e}")
+                    self.logger.error(f"FLAMEImage detected, but inference failed.\n{e.__class__.__name__}: {e}")
+                    raise CAREInferenceError(f"FLAMEImage detected, but inference failed.\n{e.__class__.__name__}: {e}")
             else:
                 try:
                     self.logger.info(f"({idx}/{length}) - Inferring on array (shape: {image.shape} | dtype: {image.dtype})")
@@ -338,8 +346,8 @@ class CAREInferenceSession():
                         arr=image
                     )
                 except Exception as e:
-                    self.logger.error(f"NDArray detected, but inference failed.\nERROR: {e}")
-                    raise CAREInferenceError(f"NDArray detected, but inference failed.\nERROR: {e}")
+                    self.logger.error(f"NDArray detected, but inference failed.\n{e.__class__.__name__}: {e}")
+                    raise CAREInferenceError(f"NDArray detected, but inference failed.\n{e.__class__.__name__}: {e}")
         
         return res
 
@@ -359,15 +367,20 @@ class CAREInferenceSession():
         try:
             patch_dim = self.model_config["Patch_Config"]['patch_size']
         except Exception as e:
-            self.logger.error(f"Could not retrieve patch dimensions from self.model_config.\nERROR: {e}")
-            raise CAREInferenceError(f"Could not retrieve patch dimensions from self.model_config.\nERROR: {e}")
+            self.logger.error(f"Could not retrieve patch dimensions from self.model_config.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Could not retrieve patch dimensions from self.model_config.\n{e.__class__.__name__}: {e}")
 
         try:
             assert len(arr.shape) == 3, f"Input dimensions must be of size 3 (YXC), not {len(arr.shape)}."
             input_y, input_x, input_c = arr.shape
         except Exception as e:
-            self.logger.error(f"Cannot interpret input dimensions for patch extraction.\nERROR: {e}")
-            raise CAREInferenceError(f"Cannot interpret input dimensions for patch extraction.\nERROR: {e}")
+            self.logger.error(f"Cannot interpret input dimensions for patch extraction.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Cannot interpret input dimensions for patch extraction.\n{e.__class__.__name__}: {e}")
+        
+        # if input array is the size of the input patch, just return it with new batch dimension (a.k.a. N)
+        if patch_dim == input_y and patch_dim == input_x: return arr[np.newaxis, ...]
+
+        # NOTE: This will still break if ONE of input arary dimensions matches the patch dimension, but the other doesn't.
 
         output = None
         start_x = 0
@@ -396,7 +409,14 @@ class CAREInferenceSession():
             if input_x % patch_dim != 0:
                 output += [arr[-patch_dim:, -patch_dim:, :]]
 
-        return np.stack(output, axis=0)
+        try:
+            assert output is not None, f"Output is NoneType. Not patches could be extracted. Check dimensions of image {arr.shape} and patch ({patch_dim}, {patch_dim}, C)"
+            assert len(output) > 0, f"No patches could be extracted from input image of shape {arr.shape} and dtype {arr.dtype}"
+            if len(output) == 1: return output[0][np.newaxis,...]
+            else: return np.stack(output, axis=0)
+        except Exception as e:
+            self.logger.error(f"Could not output extracted patches.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Could not output extracted patches.\n{e.__class__.__name__}: {e}")
 
 
     def _stitch_patches(self, patches: NDArray, final_dim: tuple[int]) -> NDArray:
@@ -413,8 +433,8 @@ class CAREInferenceSession():
         try:
             input_y, input_x, input_c = final_dim
         except Exception as e:
-            self.logger.error(f"Could not inppack 'final_dim' of size {len(final_dim)} into Y,X,C.\nERROR {e}")
-            raise CAREInferenceError(f"Could not inppack 'final_dim' of size {len(final_dim)} into Y,X,C.\nERROR {e}")
+            self.logger.error(f"Could not inppack 'final_dim' of size {len(final_dim)} into Y,X,C.\n{e.__class__.__name__} {e}")
+            raise CAREInferenceError(f"Could not inppack 'final_dim' of size {len(final_dim)} into Y,X,C.\n{e.__class__.__name__} {e}")
         
         assert patches.shape[-1] == input_c, f"Channels in patch array and final_dim do not match ({patches.shape[-1]} vs. {input_c})"
 
