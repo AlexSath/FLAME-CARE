@@ -30,7 +30,13 @@ class CAREDatasetError(Exception):
         super().__init__(self.message)
 
 class CAREInferenceError(Exception):
-    "Raise if some error occurs during FLAME inference"
+    "Raise if some error occurs during CARE inference"
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+class FLAMEIOError(Exception):
+    "Raise if some error occurs with input/output during FLAME/CARE"
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)

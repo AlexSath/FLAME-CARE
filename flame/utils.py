@@ -10,35 +10,6 @@ from natsort import natsorted
 from .error import FLAMEDtypeError, CAREDatasetError
 
 
-def get_input_and_GT_paths(input_direc: str, input_frames: int, gt_frames: int, logger: Logger=None) -> tuple[list]:
-    try:   
-        low_paths = []
-        GT_paths = []
-        for root, dirs, files in os.walk(input_direc):
-            for f in files:
-                if f"frames{input_frames}" in f:
-                    low_paths.append(os.path.join(root, f))
-                elif f"frames{gt_frames}" in f:
-                    GT_paths.append(os.path.join(root, f))
-        assert len(low_paths) != 0 and len(GT_paths) != 0, f"Need to find more than 0 input image paths and GT image paths."
-        assert len(low_paths) == len(GT_paths), f"Number of input image paths and GT image paths should be the same."
-        if logger is not None:
-            logger.info(f"Found {len(low_paths)} images in {input_direc}")
-    except AssertionError as e:
-        if logger is not None:
-            logger.error(f"Incorrect image count in {input_direc}")
-        raise CAREDatasetError(f"Incorrect image count in {input_direc}")
-    except Exception as e:
-        if logger is not None:
-            logger.error(f"Unknown error occurred when finding images in input direc {input_direc}.\nERROR: {e}")
-        raise CAREDatasetError(f"Unknown error occurred when finding images in input direc {input_direc}.\nERROR: {e}")
-
-    low_paths = natsorted(low_paths)
-    GT_paths = natsorted(GT_paths)
-
-    return low_paths, GT_paths
-
-
 def _int_or_int_array(
         data: Any, 
         logger: Union[Logger, NoneType]=None,
