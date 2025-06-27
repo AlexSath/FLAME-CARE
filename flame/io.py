@@ -3,10 +3,12 @@ from types import NoneType
 from typing import Union, List, Tuple
 
 from natsort import natsorted
+import pandas as pd
 
 from .error import FLAMEIOError
 
 LOGGER = logging.getLogger("FLAMEIO")
+
 
 def get_input_and_GT_paths(input_direc: str, input_frames: int, gt_frames: int) -> Tuple[List]:
     try:   
@@ -36,9 +38,9 @@ def get_input_and_GT_paths(input_direc: str, input_frames: int, gt_frames: int) 
 
 def find_dataset_config(
         input_direc: str, 
-        id: str, 
+        this_id: str, 
         key: Union[str, List[str]]=['FLAME_Dataset', 'id'],
-        file_ext: str=".json",
+        file_ext: str="json",
         fail_ok: bool=False,
     ) -> Union[NoneType, Tuple[str, dict]]:
     """
@@ -54,13 +56,15 @@ def find_dataset_config(
      - None IF no matches found and 'fail_ok' is True
      - tuple(output_hit (str), output_dict (dict)) IF a single match is found. String is path to json and dict is associated dictionary.
     """
-    hits = glob.glob(os.path.join(input_direc, f"*.{file_ext}"))
+    glob_address = os.path.join(input_direc, f"*.{file_ext}")
+    hits = glob.glob(glob_address)
+    assert len(hits) > 0, f"Not hits found using glob {glob_address}"
 
     matching_files = 0
     for hit in hits:
         try:
             try:
-                json_dict = json.read(open(hit, 'r'))
+                json_dict = json.load(open(hit, 'r'))
                 output_dict = json_dict.copy()
                 output_hit = hit
             except Exception as e:
@@ -76,23 +80,98 @@ def find_dataset_config(
                     raise e
         except Exception as e:
             if fail_ok: 
-                LOGGER.warning(f"Assess whether {id} was in JSON from path {hit}. 'fail_ok' set to True. Continuing...")
+                LOGGER.warning(f"Assess whether {this_id} was in JSON from path {hit}. 'fail_ok' set to True. Continuing...")
                 continue
             else:
-                raise FLAMEIOError(f"Assess whether {id} was in JSON from path {hit}. 'fail_ok' set to False. Exiting.\n{e.__class__.__name__}: {e}")
+                raise FLAMEIOError(f"Assess whether {this_id} was in JSON from path {hit}. 'fail_ok' set to False. Exiting.\n{e.__class__.__name__}: {e}")
             
-        if json_dict == id: matching_files += 1
+        if json_dict == this_id: matching_files += 1
 
     if matching_files == 0 and not fail_ok:
-        LOGGER.exception(f"'fail_ok' set to False and found no JSONs found with {id} in {input_direc} kiven key {key}.")
-        raise FLAMEIOError(f"'fail_ok' set to False and found no JSONs found with {id} in {input_direc} kiven key {key}.")
+        LOGGER.exception(f"'fail_ok' set to False and found no JSONs found with {this_id} in {input_direc} kiven key {key}.")
+        raise FLAMEIOError(f"'fail_ok' set to False and found no JSONs found with {this_id} in {input_direc} kiven key {key}.")
     elif matching_files == 0 and fail_ok:
-        LOGGER.warning(f"'fail_ok' set to True and found no JSONs found with {id} in {input_direc} kiven key {key}. Returning None.")
+        LOGGER.warning(f"'fail_ok' set to True and found no JSONs found with {this_id} in {input_direc} kiven key {key}. Returning None.")
         return None, None
     elif matching_files > 1:
-        LOGGER.exception(f"Multiple JSONs found with {id} in {input_direc} kiven key {key}. Resolve conflict and try again.")
-        raise FLAMEIOError(f"Multiple JSONs found with {id} in {input_direc} kiven key {key}. Resolve conflict and try again.")
+        LOGGER.exception(f"Multiple JSONs found with {this_id} in {input_direc} kiven key {key}. Resolve conflict and try again.")
+        raise FLAMEIOError(f"Multiple JSONs found with {this_id} in {input_direc} kiven key {key}. Resolve conflict and try again.")
     else:
         return output_hit, output_dict
 
+
+def flame_paths_from_ids(
+        root_dir: str, 
+        index_path: str, 
+        id_list: List[int], 
+        pd_sep: str=",",
+        id_col: str="id",
+        path_col: str="image",
+        tile_data_ext: str="tileData.txt",
+        accept_missing: bool=False
+    ) -> List[str]:
+    """
+    Description: Will look for flame images based on their unique IDs given a root directory and a
+    table matching IDs to filepaths.
+
+    Args:
+     - root_dir (str): a path to the root directory when all images will be searched for
+     - index_path (str): a path to the table (DataFrame-like) matching unique image ids to relative image paths
+     - id_list (list[int]): single image id or list of image ids
+     - pd_sep (str): the separation character that Pandas should use to parse 'index_path' into a DataFrame. DEFAULT=','
+     - id_col (str): the name of the column storing image ids. DEFAULT='id'
+     - path_col (str): the name of the column storing relative image paths. DEFAULT='image'
+     - tile_data_ext (str): the extension used to search for every image's associated tileData JSON. DEFAULT='tileData.txt'
+     - accept_missing (bool): whether to skip missing ids or raise an error when they are encountered. DEFAULT=False
+    """
+
+    assert os.path.isdir(root_dir), f"Could not find directory at {root_dir}"
+    assert os.path.isfile(index_path), f"Provided index path is not a file ({index_path})"
+
+    try:
+        df = pd.read_csv(index_path, sep=pd_sep)
+    except Exception as e:
+        LOGGER.error(f"Could not open dataframe from provided 'index_path' ({index_path}).\n{e.__class__.__name__}: {e}")
+        raise FLAMEIOError(f"Could not open dataframe from provided 'index_path' ({index_path}).\n{e.__class__.__name__}: {e}")
     
+    id_dict = {}
+    for this_id, path in zip(df[id_col], df[path_col]):
+        id_dict[this_id] = path
+
+    if not isinstance(id_list, list): id_list = [id_list]
+
+    output_paths = []
+    for this_id in id_list:
+        try:
+            this_rel_path = id_dict[this_id]
+        except KeyError as e:
+            LOGGER.warning(f"Could not find image of index {this_id} in {index_path}.")
+
+        try:
+            this_full_path = os.path.join(root_dir, this_rel_path)
+            assert os.path.isfile(this_full_path), f"Could not file image at specified path {this_full_path}."
+            this_tileData_path = f"{os.path.splitext(this_full_path)[0]}.{tile_data_ext}"
+            assert os.path.isfile(this_full_path), f"Could not file associated tileData at {this_tileData_path}."
+            output_paths.append(this_full_path)
+        except Exception as e:
+            if accept_missing:
+                LOGGER.warning(
+                    f"Could not verify the existance of image ({os.path.basename(this_full_path)})" \
+                    + f"and/or tile data (.{tile_data_ext}) from {os.path.dirname(this_full_path)}. Skipping!" \
+                    + f"\n{e.__class__.__name__}: {e}"
+                )
+                continue
+            else:
+                LOGGER.exception(
+                    f"Could not verify the existance of image ({os.path.basename(this_full_path)})" \
+                    + f"and/or tile data (.{tile_data_ext}) from {os.path.dirname(this_full_path)}." \
+                    + f"\n{e.__class__.__name__}: {e}"
+                )
+                raise FLAMEIOError(
+                    f"Could not verify the existance of image ({os.path.basename(this_full_path)})" \
+                    + f"and/or tile data (.{tile_data_ext}) from {os.path.dirname(this_full_path)}." \
+                    + f"\n{e.__class__.__name__}: {e}"
+                )
+    
+    return output_paths
+
