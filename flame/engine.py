@@ -8,7 +8,8 @@ import onnxruntime as ort
 from onnxruntime import InferenceSession
 import numpy as np
 from numpy.typing import NDArray
-import mlflow.artifacts as artifacts
+import mlflow
+from mlflow import artifacts
 
 from .image import FLAMEImage, is_FLAME_image
 from .error import CAREInferenceError, FLAMEImageError
@@ -33,6 +34,8 @@ class CAREInferenceSession():
         self.input_name, self.input_shape, self.input_dtype = None, None, None
         self.inferenceSession = self._load_model(model_path)
         self.dataset_config = self._load_json(dataset_config_path)
+        self.from_mlflow, self.mlflow_tracking_uri = False, None 
+        self.mlflow_run_id, self.mlflow_run_name = None, None
 
         try:
             self.input_min = _float_or_float_array(self.dataset_config['FLAME_Dataset']['input']['pixel_1pct'])
@@ -62,6 +65,8 @@ class CAREInferenceSession():
         logger = logging.getLogger("CareInference")
         temp_direc = os.path.join(os.getcwd(), "temp")
         os.makedirs(temp_direc, exist_ok=True)
+
+        logger.info(f"Loading CAREInferenceSession from MLFlow tracking URI {tracking_uri} and run id {run_id}")
 
         try:
             artifacts.download_artifacts(
@@ -96,6 +101,10 @@ class CAREInferenceSession():
                 dataset_config_path=json_path,
             )
             rmtree(temp_direc)
+            setattr(obj, "from_mlflow", True)
+            setattr(obj, "mlflow_tracking_uri", tracking_uri)
+            setattr(obj, "mlflow_run_id", run_id)
+            setattr(obj, "mlflow_run_name", mlflow.get_run(run_id).info.run_name)
             return obj
         except Exception as e:
             logger.error(f"Could not initialize CAREInferenceSession object.\nEXCEPTION: {e}")
@@ -283,7 +292,6 @@ class CAREInferenceSession():
                 if idx == channel_idx: continue
                 transpose_shape += [idx]
             transpose_shape += [channel_idx]
-            print(transpose_shape)
             frames = np.transpose(frames, tuple(transpose_shape))
 
         # Get the current shape. Will be ...,Y,X,C
@@ -469,5 +477,22 @@ class CAREInferenceSession():
                 patch_index += 1
 
         return output
+    
+    def __repr__(self):
+        str = f"Obj CAREInferenceSession @{hex(id(self))}:\n" \
+         + f" - Input Dim: {self.input_shape}\n" \
+         + f" - Input DType: {self.input_dtype}\n" \
+         + f" - From MLFlow: {self.from_mlflow}\n"
+
+        if self.from_mlflow:
+            str += f"" \
+             + f" - MLFlow Tracking URI: {self.mlflow_tracking_uri}\n" \
+             + f" - MLFlow Run ID: {self.mlflow_run_id}\n" \
+             + f" - MLFlow Run Name: {self.mlflow_run_name}\n"
+
+        return str
+    
+    def __str__(self):
+        return repr(self)
 
 
