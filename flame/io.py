@@ -9,6 +9,12 @@ from .error import FLAMEIOError
 
 LOGGER = logging.getLogger("FLAMEIO")
 
+def get_unshared_path(p1, p2):
+    n_base = len(p1.split(os.path.sep))
+    n_target = len(p2.split(os.path.sep))
+    assert n_base < n_target, f"Path 1 {p1} must be smaller than Path 2 {p2}"
+    return os.path.sep.join(p2.split(os.path.sep)[n_base:])
+
 
 def get_input_and_GT_paths(input_direc: str, input_frames: int, gt_frames: int) -> Tuple[List]:
     try:   
