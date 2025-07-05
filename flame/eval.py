@@ -3,7 +3,7 @@ import logging
 from skimage.metrics import structural_similarity
 import numpy as np
 
-from flame.error import FLAMEEvalError
+from .error import FLAMEEvalError
 
 logger = logging.getLogger("Eval")
 
