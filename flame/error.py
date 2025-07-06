@@ -40,3 +40,21 @@ class FLAMEIOError(Exception):
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
+
+class FLAMEMLFlowError(Exception):
+    "Raise if some error occurs during interfact with MLFlow in any FLAME dependency"
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+class FLAMECmdError(Exception):
+    "Raise if some error occurs when running command-line FLAME scripts"
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+class FLAMEPyMatlabError(Exception):
+    "Raise if some error occurs when Python tries to interface with MATLAB"
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)

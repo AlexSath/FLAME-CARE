@@ -1,4 +1,4 @@
-import os
+import os, logging, subprocess
 from logging import Logger
 from typing import Union, Any
 from types import NoneType
@@ -6,9 +6,11 @@ from types import NoneType
 import numpy as np
 from numpy.typing import NDArray
 from natsort import natsorted
+from matlab import engine as matlab_engine
 
-from .error import FLAMEDtypeError, CAREDatasetError
+from .error import FLAMEDtypeError, CAREDatasetError, FLAMEMLFlowError
 
+LOGGER = logging.getLogger("UTIL")
 
 def _int_or_int_array(
         data: Any, 
@@ -267,40 +269,54 @@ def _expand_dict_fields(data: dict) -> dict:
             pass
 
 
-def reduce_all(obj, rec_num, from_adx=None):
-    forbidden_types = [
-        'method-wrapper', 'str', 'wrapper_descriptor', 'object', 'type', 'code', 'NoneType', 'string',
-        '__str__', 'cell', 'function', 'method', 'builtin_function_or_method', 'int', 'float', 'bool',
-        'SymbolicArguments', 'TrackableReference', 'Function', 'ABCMeta'
+def set_up_tracking_server(ip: str, port: str, direc: str, log_path: str) -> subprocess.Popen:
+    """
+    Set up tracking server by spawning up parallel process.
+
+    Args:
+     - ip (str): IP where to host the MLFlow server (reocmmend 127.0.0.1 a.k.a. localhost)
+     - port (str): Port at IP where to host the MLFlow server
+     - direc (str): The directory where mlflow run data & associated artifacts are stored. Typically 'mlruns'
+     - log_path (str): Path to directory where mlflow server logs will be stored.
+
+    Returns:
+     - proc (subprocess.Popen): Process where the server is being hosted
+    """
+
+    server_command = [
+        "mlflow", "server",
+        "--host", ip,
+        "--port", port,
+        "--backend-store-uri", direc
     ]
-    forbidden_attr = [
-        '__new__', '__format__', '__dir__', '__init_subclass__', '__getstate__', '__call__',
-        '__IPYTHON__', '__setattr__', '__delattr__', '__reduce_ex__', '__sizeof__', '__getnewargs__', '_tracker',
-        '__init__', '__repr__', '__str__', '__subclasshook__'
-    ]
-    if type(obj).__name__ in forbidden_types: return
-    print(f"Assessing object {obj} of type {type(obj).__name__}")
-    for adx, attr in enumerate(dir(obj)):
-        if attr in forbidden_attr: continue
-        val = getattr(obj, attr, None)
-        if type(getattr(obj, attr)).__name__ in forbidden_types: continue
-        if "__reduce__" == attr:
-            try:
-                obj.__reduce__()
-                # logger.info(f"Successfully reduced obj {obj} of type {type(obj).__name__}")
-            except Exception as e:
-                raise AttributeError(f"__reduce__() failed on {obj} at {rec_num} recursions.\nERROR: {e}")
-        else:
-            if is_iterable(getattr(obj, attr, None)):
-                try:
-                    for attr_obj in getattr(obj, attr):
-                        reduce_all(attr_obj, rec_num+1, from_adx=adx)
-                except RecursionError as e:
-                    print(f"Reached recursion limit on {obj} of type {type(obj).__name__}")
-                    # print(obj.__class__)
-            else:
-                try:
-                    reduce_all(getattr(obj, attr), rec_num+1, from_adx=adx)
-                except RecursionError as e:
-                    print(f"Reached recursion limit on {obj} of type {type(obj).__name__}")
+    
+    LOGGER.info(f"Starting MLFLOW server with command:\n`{' '.join(server_command)}`")
+    MLFLOW_SERVER_LOG = open(log_path, "w+")
+    LOGGER.info(f"Starting MLFLOW server log at path {MLFLOW_SERVER_LOG.name}")
+
+    try:
+        proc = subprocess.Popen(
+            server_command,
+            stdout=MLFLOW_SERVER_LOG,
+            stderr=MLFLOW_SERVER_LOG
+        )
+    except Exception as e:
+        LOGGER.error(f"Problem starting MLFlow Server process.\n{e.__class__.__name__}: {e}")
+        raise FLAMEMLFlowError(f"Problem starting MLFlow Server process.\n{e.__class__.__name__}: {e}")
+
+    return proc
+
+
+def update_matlab_variables(variable_dict: dict, skip_missing: bool=False) -> None:
+    """
+    Sync all of the variables in the provided variable dictionaries
+
+    Args:
+     - variable_dict (dict): Dictionary of variables to update
+     - skip_missing (bool): Whether to skip variables that are not found in MATLAB engine. DEFAULT: False.
+
+    Returns: None. Updates the variables in-place
+    """
+    for key in variable_dict.keys():
+        variable_dict[key] = matlab_engine.workspace[key]
         
