@@ -24,6 +24,7 @@ logging.basicConfig(
 )
 
 def main():
+    print(f"Python system logs can be found at {LOG_DIREC}")
     parser = argparse.ArgumentParser(
         prog="CARE_on_data.py",
         description= "Use CARE (content-aware image restoration) to denoise data.\n" \
@@ -33,6 +34,7 @@ def main():
 
     meta_group = parser.add_argument_group("Meta Parameters")
     meta_group.add_argument("--matlab", action="store_true", help="Whether to coordinate with a running MATLAB/FLAME `sessionPostProcessing` thread.")
+    meta_group.add_argument("--matlab_pid", required=("--matlab" in argv), help="The MATLAB process id to be used during engine linkage. Only required if '--matlab' requested")
     meta_group.add_argument("--data-path", required=("--matlab" not in argv), help="The path to the data to infer on if '--matlab' is not requested.")
     
     model_group = parser.add_argument_group("Model Information", description="Variables to configure the name and version of the requested CARE model.")
@@ -94,24 +96,45 @@ def main():
         LOGGER.error(f"Could not initialize CAREInferenceSession from {THIS_RUN_ID}.{e.__class__.__name__}: {e}")
         raise FLAMECmdError(f"Could not initialize CAREInferenceSession from {THIS_RUN_ID}.{e.__class__.__name__}: {e}")
     
-    """DETERMINING IF IN MATLAB MODE"""
+    """IF IN MATLAB MODE"""
     if args.matlab == True:
         try:
-            matlab_engine.connect_matlab()
+            MATLAB_ENGINE = matlab_engine.connect_matlab(f"MATLAB_{args.matlab_pid}")
+            LOGGER.info(f"Connected to MATLAB engine of PID {args.matlab_pid}.")
         except Exception as e:
-            LOGGER.exception(f"Could not connect to matlab engine.\n{e.__class__.__name__}: {e}")
-            raise FLAMEPyMatlabError(f"Could not connect to matlab engine.\n{e.__class__.__name__}: {e}")
+            LOGGER.exception(f"Could not connect to MATLAB engine of PID {args.matlab_pid}.\n{e.__class__.__name__}: {e}")
+            raise FLAMEPyMatlabError(f"Could not connect to MATLAB engine of PID {args.matlab_pid}.\n{e.__class__.__name__}: {e}")
         
+        # If in MATLAB mode, initialize the matlab variables.
         matlab_engine_variable_names = [
-            "PYTHON_INFERENCE_ACTIVE", "CURRENT_IMAGE"
+            "PYTHON_INFERENCE_ACTIVE", "PYTHON_SETUP_COMPLETE", "PYTHON_CURRENT_IMAGE"
         ]
+        matlab_engine_variable_dict = {
+            x: None for x in matlab_engine_variable_names
+        }
         try:
             update_matlab_variables(
-                {x: None for x in matlab_engine_variable_names}
+                matlab_eng=MATLAB_ENGINE,
+                variable_dict=matlab_engine_variable_dict,
+                skip_missing=False
             )
         except Exception as e:
             LOGGER.exception(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
             raise FLAMEPyMatlabError(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
+        
+        # Setup is complete at this point, so start the main inference loop:
+        while MATLAB_ENGINE["PYTHON_INFERENCE_ACTIVE"]:
+            LOGGER.info(f"Python CARE inference is active...")
+
+    else: #IF NOT IN MATLAB MODE:
+        if DATA_PATH_TYPE == "file":
+            pass
+        elif DATA_PATH_TYPE == "directory":
+            pass
+        else:
+            LOGGER.exception(f"Did not recognize '--data-path' of type {DATA_PATH_TYPE} ({type(args.data_path)})")
+            raise FLAMECmdError(f"Did not recognize '--data-path' of type {DATA_PATH_TYPE} ({type(args.data_path)})")
+
         
 
     
