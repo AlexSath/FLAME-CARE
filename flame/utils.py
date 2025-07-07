@@ -307,7 +307,7 @@ def set_up_tracking_server(ip: str, port: str, direc: str, log_path: str) -> sub
     return proc
 
 
-def update_matlab_variables(variable_dict: dict, skip_missing: bool=False) -> None:
+def update_matlab_variables(matlab_eng: str, variable_dict: dict, skip_missing: bool=False) -> None:
     """
     Sync all of the variables in the provided variable dictionaries
 
@@ -318,5 +318,9 @@ def update_matlab_variables(variable_dict: dict, skip_missing: bool=False) -> No
     Returns: None. Updates the variables in-place
     """
     for key in variable_dict.keys():
-        variable_dict[key] = matlab_engine.workspace[key]
+        try:
+            variable_dict[key] = matlab_engine.workspace[key]
+        except Exception as e:
+            if skip_missing:
+                LOGGER.error(f"Could not find {key} in ")
         
