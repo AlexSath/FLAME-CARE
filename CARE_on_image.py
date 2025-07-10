@@ -3,13 +3,14 @@ from sys import argv
 from pathlib import Path # Python 3.5+
 from datetime import datetime
 
+import numpy as np
 import mlflow
 from mlflow.client import MlflowClient
 from matlab import engine as matlab_engine
 
 from flame.image import FLAMEImage
 from flame.engine import CAREInferenceSession
-from flame.error import FLAMEMLFlowError, FLAMECmdError, FLAMEIOError, FLAMEPyMatlabError
+from flame.error import FLAMEMLFlowError, FLAMECmdError, FLAMEIOError, FLAMEPyMatlabError, CAREInferenceError
 from flame.io import assert_path_exists, assert_direc_exists, assert_file_exists
 from flame.utils import set_up_tracking_server, update_matlab_variables
 
@@ -122,9 +123,29 @@ def main():
             LOGGER.exception(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
             raise FLAMEPyMatlabError(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
         
+        MATLAB_ENGINE["PYTHON_SETUP_COMPLETE"] = True
+        
         # Setup is complete at this point, so start the main inference loop:
         while MATLAB_ENGINE["PYTHON_INFERENCE_ACTIVE"]:
             LOGGER.info(f"Python CARE inference is active...")
+            if not np.isnan(MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]):
+                try:
+                    assert os.path.isfile(MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]), f"Provided path in 'PYTHON_CURRENT_IMAGE' must be a file."
+                    LOGGER.info(f"Inferring on {MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]}...")
+                    MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"] = np.nan
+                except Exception as e:
+                    LOGGER.exception(f"Could not run inference on provided path {MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]}.\n{e.__class__.__name__}: {e}")
+                    raise CAREInferenceError(f"Could not run inference on provided path {MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]}.\n{e.__class__.__name__}: {e}")
+
+            try: # update MATLAB variables to sync processes after every iteration of the while loop
+                update_matlab_variables(
+                    matlab_eng=MATLAB_ENGINE,
+                    variable_dict=matlab_engine_variable_dict,
+                    skip_missing=False
+                )
+            except Exception as e:
+                LOGGER.exception(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
+                raise FLAMEPyMatlabError(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
 
     else: #IF NOT IN MATLAB MODE:
         if DATA_PATH_TYPE == "file":
@@ -134,12 +155,7 @@ def main():
         else:
             LOGGER.exception(f"Did not recognize '--data-path' of type {DATA_PATH_TYPE} ({type(args.data_path)})")
             raise FLAMECmdError(f"Did not recognize '--data-path' of type {DATA_PATH_TYPE} ({type(args.data_path)})")
-
-        
-
     
-    
-
     subprocess.Popen.kill(MLFLOW_SERVER_PROCESS)
 
 if __name__ == "__main__":
