@@ -5,7 +5,16 @@ MATLAB.
 
 There are two possible implementations. Both require the *CARE_on_image.py* script. The focus of this README
 will be the implementation with MATLAB integration. This integration **makes inference faster** when needing
-to infer on many images sequentially through MATLAB. It accomplishes this by 
+to infer on many images sequentially through MATLAB. It accomplishes this by loading the inference engine
+before it is needed and keeping it loaded into memory (as opposed to re-initializing it every time it is 
+needed). While this is an unusual implementation, it is made possible by MATLAB having built-in tools
+to communicate with Python processes through variables in the MATLAB workspace. In this case, only file
+paths to images are shared between the Python process and the MATLAB process. In other words, the logic and flow
+of information between two processes is as follows:
+1. the MATLAB process will save an image to the disk and provided the savepath to the Python process.
+2. Python will use an ONNX pre-loaded from MLFlow during Python process initialization to infer on data from the provided path.
+3. Python will overwrite the data path with the post-inference data
+4. MATLAB will load data (now processed / inferred upon) from the same path.
 
 ***IMPORTANT:*** Be sure to confirm the compatibility of your MATLAB with the python used in the conda environment
 for this repository. If using a default setup, the repository uses Python 3.12, which as of July 2025 requires
@@ -61,3 +70,9 @@ Note that the Python process can handle images that have been saved in raw flame
 `tileData.txt` in the same folder with the same name.
 
 #### 4. Ending the Python Process
+When inference is done inside of the MATLAB process, it is easy to terminate the running Python process:
+
+```
+PYTHON_INFERENCE_ACTIVE = false % sends message to Python process to exit
+```
+

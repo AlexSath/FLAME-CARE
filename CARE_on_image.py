@@ -27,24 +27,24 @@ def main():
     print(f"Python system logs can be found at {LOG_DIREC}")
     parser = argparse.ArgumentParser(
         prog="CARE_on_data.py",
-        description= "Use CARE (content-aware image restoration) to denoise data.\n" \
-            + " - Data can be a single tiff or a folder of tiffs.\n" \
-            + " - Uses MLFlow (v. 2-22-2) Registered Models to track and retrieve models.\n"
+        description= "Use CARE (content-aware image restoration) to denoise data." \
+            + " Data can be a single tiff or a folder of tiffs." \
+            + " Uses MLFlow (v. 2-22-2) Registered Models to track and retrieve models."
     )
 
-    meta_group = parser.add_argument_group("Meta Parameters")
+    meta_group = parser.add_argument_group("Meta Parameters", description="Parameters determining how the Python inference session is run.")
     meta_group.add_argument("--matlab", action="store_true", help="Whether to coordinate with a running MATLAB/FLAME `sessionPostProcessing` thread.")
-    meta_group.add_argument("--matlab_pid", required=("--matlab" in argv), help="The MATLAB process id to be used during engine linkage. Only required if '--matlab' requested")
+    meta_group.add_argument("--matlab_pid", required=("--matlab" in argv), help="The MATLAB process id to be used during engine linkage. Only required if '--matlab' requested.")
     meta_group.add_argument("--data-path", required=("--matlab" not in argv), help="The path to the data to infer on if '--matlab' is not requested.")
     
     model_group = parser.add_argument_group("Model Information", description="Variables to configure the name and version of the requested CARE model.")
-    model_group.add_argument("--model-name", required=True, type=str, choices=["CARE-1Channel"], help="The name of the 'Registered Model' to pull from")
+    model_group.add_argument("--model-name", required=True, type=str, choices=["CARE-1Channel"], help="The name of the 'Registered Model' to pull from.")
     model_group.add_argument("--model-version", type=int, required=False, help="The version of the registered model to pull from. If none is provided, most recent is used.")
 
     mlflow_group = parser.add_argument_group("MLFlow Tracking", description="Variables to configure MLFlow tracking for model retrieval.")
     mlflow_group.add_argument("--mlflow-tracking-direc", required=True, help="Directory with 'mlruns' folder. Try '<mount>/SynologyDrive/CARE_for_MATLAB/mlruns'.")
     mlflow_group.add_argument("--mlflow-tracking-ip", required=False, default="127.0.0.1", help="IP address where to host the MLFlow server.")
-    mlflow_group.add_argument("--mlflow-tracking-port", required=False, default="5050", help="Port where to run the MLFlow server")
+    mlflow_group.add_argument("--mlflow-tracking-port", required=False, default="5050", help="Port where to run the MLFlow server.")
 
     args = parser.parse_args()
 
