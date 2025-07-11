@@ -21,7 +21,7 @@ After hitting enter and allowing the command to run its course, close and re-ope
 
 ![Powershell Base](images/powershell_base.png)
 
-### Handling common problems during conda installation and initialization:
+### ⚠️ Handling common problems during conda installation and initialization:
 1. `conda` is not recognized
 This can arise in many different flavors based on your operating system, but will be some variation of:
 ```
@@ -46,7 +46,7 @@ This will install the following dependencies in the CARE environment:
  - **CUDA Version (Python): 12.5**
  - **cuDNN Version (Python): 9.3.0**
 
-### Handling common problems during CARE environment initialization:
+### ⚠️ Handling common problems during CARE environment initialization:
 1. Pip package cannot be installed.
 
 **SOLUTION:** In `environment_windows.yml`, change the package version of the package that cannot be installed.
