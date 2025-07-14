@@ -131,11 +131,11 @@ def main():
             if not np.isnan(MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]):
                 try:
                     assert os.path.isfile(MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]), f"Provided path in 'PYTHON_CURRENT_IMAGE' must be a file."
-                    LOGGER.info(f"Inferring on {MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]}...")
+                    LOGGER.info(f"Inferring on {MATLAB_ENGINE['PYTHON_CURRENT_IMAGE']}...")
                     MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"] = np.nan
                 except Exception as e:
-                    LOGGER.exception(f"Could not run inference on provided path {MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]}.\n{e.__class__.__name__}: {e}")
-                    raise CAREInferenceError(f"Could not run inference on provided path {MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]}.\n{e.__class__.__name__}: {e}")
+                    LOGGER.exception(f"Could not run inference on provided path {MATLAB_ENGINE['PYTHON_CURRENT_IMAGE']}.\n{e.__class__.__name__}: {e}")
+                    raise CAREInferenceError(f"Could not run inference on provided path {MATLAB_ENGINE['PYTHON_CURRENT_IMAGE']}.\n{e.__class__.__name__}: {e}")
 
             try: # update MATLAB variables to sync processes after every iteration of the while loop
                 update_matlab_variables(
