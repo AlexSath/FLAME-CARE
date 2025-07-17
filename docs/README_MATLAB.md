@@ -1,4 +1,4 @@
-## Use this readme if running inference through MATLAB.
+# Use this readme if running inference through MATLAB.
 
 The following instructions should be used if you would like to run CARE inference for FLAME images through
 MATLAB.
@@ -28,7 +28,7 @@ To understand how Python Connects to the MATLAB Engine more generally:
  - [Python and MATLAB Table Interoperability (+ Numpy DTypes)](https://www.mathworks.com/help/matlab/matlab_external/use-matlab-tables-and-timetables-in-python.html)
 
 
-#### 1. Setting up MATLAB Engine (Workspace) Variables
+## 1. Setting up MATLAB Engine (Workspace) Variables
 For coordination with the MATLAB process, the Python process will expect certain variables to be present in
 the MATLAB workspace.
 
@@ -40,7 +40,7 @@ while ~PYTHON_SETUP_COMPLETE % wait until the python setup is complete
 end
 ```
 
-#### 2. Initialize Script w/ MATLAB Integration
+## 2. Initialize Script w/ MATLAB Integration
 Once the variables are initialized as in step 1, the next step is to initialize the python process.
 
 This will open a new terminal window where the python process is housed. While some output will
@@ -59,7 +59,7 @@ Run *CARE_on_image.py* as normal, but with the *--matlab* command.
 (<conda_env>) user@computer:/path/to/repository$ python CARE_on_image.py --matlab --matlab_pid proc_id <args>
 ```
 
-#### 3. Sequential Image Inference
+## 3. Sequential Image Inference
 In whatever master loop is handling your image, you should infer on your images in the following way:
 
 ```
@@ -71,7 +71,7 @@ end
 Note that the Python process can handle images that have been saved in raw flame format, as long as there is a
 `tileData.txt` in the same folder with the same name.
 
-#### 4. Ending the Python Process
+## 4. Ending the Python Process
 When inference is done inside of the MATLAB process, it is easy to terminate the running Python process:
 
 ```
