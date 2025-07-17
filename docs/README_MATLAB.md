@@ -36,6 +36,8 @@ the MATLAB workspace.
 PYTHON_INFERENCE_ACTIVE = true % placeholder variable for when it should remain active
 PYTHON_SETUP_COMPLETE = false % placeholder variable for when the python setup is complete, and the python process is ready to be fed images.
 PYTHON_CURRENT_IMAGE = NaN % Set CURRENT_IMAGE to NaN when there is no image to be run
+while ~PYTHON_SETUP_COMPLETE % wait until the python setup is complete
+end
 ```
 
 #### 2. Initialize Script w/ MATLAB Integration
