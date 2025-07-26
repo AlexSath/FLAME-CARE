@@ -244,6 +244,7 @@ dependencies:
   - rsa=4.7.2=pyhd3eb1b0_1
   - s2n=1.3.27=hdbd6064_0
   - scikit-learn=1.6.1=py312h6a678d5_0
+  - scikit-image
   - send2trash=1.8.3=pyh0d859eb_1
   - setuptools=72.1.0=py312h06a4308_0
   - smmap=4.0.0=pyhd3eb1b0_0
