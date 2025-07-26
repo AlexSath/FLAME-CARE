@@ -286,8 +286,11 @@ def set_up_tracking_server(ip: str, port: str, direc: str, log_path: str) -> sub
         "mlflow", "server",
         "--host", ip,
         "--port", port,
-        "--backend-store-uri", f"file:{os.path.sep*3}{direc}",
-        "--default-artifact-root", f"file:{os.path.sep*3}{direc}"
+        "--serve-artifacts",
+        "--backend-store-uri", direc,
+        "--default-artifact-root", direc,
+        # "--artifacts-destination", f"file:{os.path.sep*3}{direc}"
+        "--artifacts-destination", direc
         # "--backend-store-uri", direc
     ]
     
