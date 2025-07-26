@@ -1,4 +1,4 @@
-import os, logging, subprocess
+import os, logging, subprocess, platform
 from logging import Logger
 from typing import Union, Any
 from types import NoneType
@@ -6,7 +6,6 @@ from types import NoneType
 import numpy as np
 from numpy.typing import NDArray
 from natsort import natsorted
-from matlab import engine as matlab_engine
 
 from .error import FLAMEDtypeError, CAREDatasetError, FLAMEMLFlowError
 
@@ -287,7 +286,9 @@ def set_up_tracking_server(ip: str, port: str, direc: str, log_path: str) -> sub
         "mlflow", "server",
         "--host", ip,
         "--port", port,
-        "--backend-store-uri", direc
+        "--backend-store-uri", f"file:{os.path.sep*3}{direc}",
+        "--default-artifact-root", f"file:{os.path.sep*3}{direc}"
+        # "--backend-store-uri", direc
     ]
     
     LOGGER.info(f"Starting MLFLOW server with command:\n`{' '.join(server_command)}`")
@@ -307,20 +308,43 @@ def set_up_tracking_server(ip: str, port: str, direc: str, log_path: str) -> sub
     return proc
 
 
-def update_matlab_variables(matlab_eng: str, variable_dict: dict, skip_missing: bool=False) -> None:
-    """
-    Sync all of the variables in the provided variable dictionaries
+def get_windows_user_path():
+    proc = subprocess.Popen(
+        ["wslvar", "USERPROFILE"],
+        stdout=subprocess.PIPE
+    )
+    windows_path = proc.stdout.read().decode("UTF-8").strip()
 
-    Args:
-     - variable_dict (dict): Dictionary of variables to update
-     - skip_missing (bool): Whether to skip variables that are not found in MATLAB engine. DEFAULT: False.
+    proc2 = subprocess.Popen(
+        ["wslpath", windows_path],
+        stdout=subprocess.PIPE
+    )
+    return proc2.stdout.read().decode("UTF-8").strip()
 
-    Returns: None. Updates the variables in-place
-    """
-    for key in variable_dict.keys():
-        try:
-            variable_dict[key] = matlab_engine.workspace[key]
-        except Exception as e:
-            if skip_missing:
-                LOGGER.error(f"Could not find {key} in ")
+
+def on_wsl(version: str=platform.uname().version) -> bool:
+    if version.endswith("Windows") or version.endswith("WSL2"):
+        return True
+    
+    return False
+
+if on_wsl():
+    import matlabengine as matlab_engine
+
+    def update_matlab_variables(matlab_eng: str, variable_dict: dict, skip_missing: bool=False) -> None:
+        """
+        Sync all of the variables in the provided variable dictionaries
+
+        Args:
+        - variable_dict (dict): Dictionary of variables to update
+        - skip_missing (bool): Whether to skip variables that are not found in MATLAB engine. DEFAULT: False.
+
+        Returns: None. Updates the variables in-place
+        """
+        for key in variable_dict.keys():
+            try:
+                variable_dict[key] = matlab_engine.workspace[key]
+            except Exception as e:
+                if skip_missing:
+                    LOGGER.error(f"Could not find {key} in ")
         
