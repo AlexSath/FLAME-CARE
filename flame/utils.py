@@ -1,4 +1,4 @@
-import os, logging, subprocess, platform
+import os, logging, subprocess, platform, yaml, re
 from logging import Logger
 from typing import Union, Any
 from types import NoneType
@@ -289,10 +289,10 @@ def set_up_tracking_server(ip: str, port: str, direc: str, log_path: str) -> sub
         "--serve-artifacts",
         "--backend-store-uri", direc,
         "--default-artifact-root", direc,
-        # "--artifacts-destination", f"file:{os.path.sep*3}{direc}"
         "--artifacts-destination", direc
-        # "--backend-store-uri", direc
     ]
+
+    update_yaml_artifact_path(direc)
     
     LOGGER.info(f"Starting MLFLOW server with command:\n`{' '.join(server_command)}`")
     MLFLOW_SERVER_LOG = open(log_path, "w+")
@@ -311,7 +311,38 @@ def set_up_tracking_server(ip: str, port: str, direc: str, log_path: str) -> sub
     return proc
 
 
-def get_windows_user_path():
+def change_root(root: str, to_change: str) -> str:
+    root_direc_split, to_change_split = root.split(os.path.sep), re.split("/|\\\\", to_change)
+    root_direc_last = root_direc_split[-1]
+    to_change_last_index = to_change_split.index(root_direc_last)
+    new = os.path.sep.join(root_direc_split + to_change_split[to_change_last_index+1:])
+    return new
+
+
+def update_yaml_artifact_path(mlrun_direc: str) -> None:
+    """
+    Will search through the provided directory and update the 'artifact_uri' within the yaml files it contains.
+
+    This is to fix issues with MLFLOW where absolute paths are used for all artifact URIs.
+    """
+    assert os.path.isdir(mlrun_direc), f"Input path {mlrun_direc} must be a directory."
+    for root, dirs, files in os.walk(mlrun_direc):
+        for f in files:
+            if os.path.splitext(f)[1] in [".yaml", ".yml"]:
+                this_path = os.path.join(root, f)
+                yml = yaml.safe_load(open(this_path, 'r'))
+                if 'artifact_uri' in yml.keys(): 
+                    artifact_path = yml['artifact_uri']
+                    yml['artifact_uri'] = change_root(root, artifact_path)
+                elif 'artifact_location' in yml.keys():
+                    artifact_path = yml['artifact_location']
+                    yml['artifact_location'] = change_root(root, artifact_path)
+                else: continue
+                yaml.dump(yml, open(this_path, "w"))
+
+
+def get_windows_user_path() -> str:
+    assert on_wsl(), f"Must be on WSL to get Windows user path"
     proc = subprocess.Popen(
         ["wslvar", "USERPROFILE"],
         stdout=subprocess.PIPE
@@ -325,13 +356,13 @@ def get_windows_user_path():
     return proc2.stdout.read().decode("UTF-8").strip()
 
 
-def on_wsl(version: str=platform.uname().version) -> bool:
-    if version.endswith("Windows") or version.endswith("WSL2"):
+def on_wsl(version: str=platform.uname().release) -> bool:
+    if version.endswith("WSL2"):
         return True
-    
     return False
 
-if on_wsl():
+
+if not on_wsl():
     import matlabengine as matlab_engine
 
     def update_matlab_variables(matlab_eng: str, variable_dict: dict, skip_missing: bool=False) -> None:
