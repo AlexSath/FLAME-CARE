@@ -7,7 +7,7 @@ import numpy as np
 from numpy.typing import NDArray
 from natsort import natsorted
 
-from .error import FLAMEDtypeError, CAREDatasetError, FLAMEMLFlowError
+from .error import FLAMEDtypeError, CAREDatasetError, FLAMEMLFlowError, FLAMEPyMatlabError
 
 LOGGER = logging.getLogger("UTIL")
 
@@ -287,9 +287,9 @@ def set_up_tracking_server(ip: str, port: str, direc: str, log_path: str) -> sub
         "--host", ip,
         "--port", port,
         "--serve-artifacts",
-        "--backend-store-uri", direc,
-        "--default-artifact-root", direc,
-        "--artifacts-destination", direc
+        "--backend-store-uri", f"file:{os.path.sep*3}{direc}" if not on_wsl() else direc,
+        "--default-artifact-root", f"file:{os.path.sep*3}{direc}" if not on_wsl() else direc,
+        "--artifacts-destination", f"file:{os.path.sep*3}{direc}" if not on_wsl() else direc
     ]
 
     update_yaml_artifact_path(direc)
@@ -312,10 +312,14 @@ def set_up_tracking_server(ip: str, port: str, direc: str, log_path: str) -> sub
 
 
 def change_root(root: str, to_change: str) -> str:
-    root_direc_split, to_change_split = root.split(os.path.sep), re.split("/|\\\\", to_change)
-    root_direc_last = root_direc_split[-1]
-    to_change_last_index = to_change_split.index(root_direc_last)
-    new = os.path.sep.join(root_direc_split + to_change_split[to_change_last_index+1:])
+    try:
+        root_direc_split, to_change_split = root.split(os.path.sep), re.split("/|\\\\", to_change)
+        root_direc_last = root_direc_split[-1]
+        to_change_last_index = to_change_split.index(root_direc_last)
+        new = os.path.sep.join(root_direc_split + to_change_split[to_change_last_index+1:])
+    except ValueError as e:
+        print(root, to_change)
+        raise
     return new
 
 
@@ -333,7 +337,7 @@ def update_yaml_artifact_path(mlrun_direc: str) -> None:
                 yml = yaml.safe_load(open(this_path, 'r'))
                 if 'artifact_uri' in yml.keys(): 
                     artifact_path = yml['artifact_uri']
-                    yml['artifact_uri'] = change_root(root, artifact_path)
+                    yml['artifact_uri'] = f"file:{os.path.sep*3}{change_root(root, artifact_path)}"
                 elif 'artifact_location' in yml.keys():
                     artifact_path = yml['artifact_location']
                     yml['artifact_location'] = change_root(root, artifact_path)
@@ -363,8 +367,6 @@ def on_wsl(version: str=platform.uname().release) -> bool:
 
 
 if not on_wsl():
-    import matlabengine as matlab_engine
-
     def update_matlab_variables(matlab_eng: str, variable_dict: dict, skip_missing: bool=False) -> None:
         """
         Sync all of the variables in the provided variable dictionaries
@@ -377,8 +379,10 @@ if not on_wsl():
         """
         for key in variable_dict.keys():
             try:
-                variable_dict[key] = matlab_engine.workspace[key]
+                variable_dict[key] = matlab_eng.workspace[key]
             except Exception as e:
                 if skip_missing:
-                    LOGGER.error(f"Could not find {key} in ")
-        
+                    LOGGER.warning(f"Could not find {key} in {matlab_eng}. 'skip_missing' is True, so continuing...")
+                else:
+                    LOGGER.exception(f"Could not find {key} in {matlab_eng}. 'skip_missing' is False, so raising...\n{e.__class__.__name__}: {e}")
+                    raise FLAMEPyMatlabError(f"Could not find {key} in {matlab_eng}. 'skip_missing' is False, so raising...\n{e.__class__.__name__}: {e}")
