@@ -100,7 +100,10 @@ def main():
     """IF IN MATLAB MODE"""
     if args.matlab == True:
         try:
-            MATLAB_ENGINE = matlab_engine.connect_matlab(f"MATLAB_{args.matlab_pid}")
+            # MATLAB_ENGINE = matlab_engine.connect_matlab(f"MATLAB_{args.matlab_pid}")
+            names = matlab_engine.find_matlab()
+            if len(names) == 1: MATLAB_ENGINE = matlab_engine.connect_matlab()
+            else: MATLAB_ENGINE = matlab_engine.connect_matlab(f"MATLAB_{args.matlab_pid}")
             LOGGER.info(f"Connected to MATLAB engine of PID {args.matlab_pid}.")
         except Exception as e:
             LOGGER.exception(f"Could not connect to MATLAB engine of PID {args.matlab_pid}.\n{e.__class__.__name__}: {e}")
@@ -123,7 +126,8 @@ def main():
             LOGGER.exception(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
             raise FLAMEPyMatlabError(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
         
-        MATLAB_ENGINE["PYTHON_SETUP_COMPLETE"] = True
+        LOGGER.info(f"Python setup is complete. Sending message to MATLAB engine through 'PYTHON_SETUP_COMPLETE' variable.")
+        MATLAB_ENGINE.workspace["PYTHON_SETUP_COMPLETE"] = True
         
         # Setup is complete at this point, so start the main inference loop:
         while MATLAB_ENGINE["PYTHON_INFERENCE_ACTIVE"]:
@@ -132,7 +136,7 @@ def main():
                 try:
                     assert os.path.isfile(MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]), f"Provided path in 'PYTHON_CURRENT_IMAGE' must be a file."
                     LOGGER.info(f"Inferring on {MATLAB_ENGINE['PYTHON_CURRENT_IMAGE']}...")
-                    MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"] = np.nan
+                    MATLAB_ENGINE.workspace["PYTHON_CURRENT_IMAGE"] = np.nan
                 except Exception as e:
                     LOGGER.exception(f"Could not run inference on provided path {MATLAB_ENGINE['PYTHON_CURRENT_IMAGE']}.\n{e.__class__.__name__}: {e}")
                     raise CAREInferenceError(f"Could not run inference on provided path {MATLAB_ENGINE['PYTHON_CURRENT_IMAGE']}.\n{e.__class__.__name__}: {e}")
@@ -156,7 +160,7 @@ def main():
             LOGGER.exception(f"Did not recognize '--data-path' of type {DATA_PATH_TYPE} ({type(args.data_path)})")
             raise FLAMECmdError(f"Did not recognize '--data-path' of type {DATA_PATH_TYPE} ({type(args.data_path)})")
     
-    subprocess.Popen.kill(MLFLOW_SERVER_PROCESS)
+    MLFLOW_SERVER_PROCESS.kill()
 
 if __name__ == "__main__":
     main()
