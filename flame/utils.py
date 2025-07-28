@@ -366,23 +366,23 @@ def on_wsl(version: str=platform.uname().release) -> bool:
     return False
 
 
-if not on_wsl():
-    def update_matlab_variables(matlab_eng: str, variable_dict: dict, skip_missing: bool=False) -> None:
-        """
-        Sync all of the variables in the provided variable dictionaries
+def update_matlab_variables(matlab_eng: str, variable_dict: dict, skip_missing: bool=False) -> None:
+    """
+    Sync all of the variables in the provided variable dictionaries
 
-        Args:
-        - variable_dict (dict): Dictionary of variables to update
-        - skip_missing (bool): Whether to skip variables that are not found in MATLAB engine. DEFAULT: False.
+    Args:
+    - variable_dict (dict): Dictionary of variables to update
+    - skip_missing (bool): Whether to skip variables that are not found in MATLAB engine. DEFAULT: False.
 
-        Returns: None. Updates the variables in-place
-        """
-        for key in variable_dict.keys():
-            try:
-                variable_dict[key] = matlab_eng.workspace[key]
-            except Exception as e:
-                if skip_missing:
-                    LOGGER.warning(f"Could not find {key} in {matlab_eng}. 'skip_missing' is True, so continuing...")
-                else:
-                    LOGGER.exception(f"Could not find {key} in {matlab_eng}. 'skip_missing' is False, so raising...\n{e.__class__.__name__}: {e}")
-                    raise FLAMEPyMatlabError(f"Could not find {key} in {matlab_eng}. 'skip_missing' is False, so raising...\n{e.__class__.__name__}: {e}")
+    Returns: None. Updates the variables in-place
+    """
+    for key in variable_dict.keys():
+        try:
+            variable_dict[key] = matlab_eng.workspace[key]
+        except Exception as e:
+            if skip_missing:
+                LOGGER.warning(f"Could not find {key} in {matlab_eng}. 'skip_missing' is True, so continuing...")
+            else:
+                LOGGER.exception(f"Could not find {key} in {matlab_eng}. 'skip_missing' is False, so raising...\n{e.__class__.__name__}: {e}")
+                raise FLAMEPyMatlabError(f"Could not find {key} in {matlab_eng}. 'skip_missing' is False, so raising...\n{e.__class__.__name__}: {e}")
+    return

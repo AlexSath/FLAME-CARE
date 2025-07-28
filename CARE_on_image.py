@@ -6,6 +6,7 @@ from datetime import datetime
 import numpy as np
 import mlflow
 from mlflow.client import MlflowClient
+import matlab
 from matlab import engine as matlab_engine
 
 from flame.image import FLAMEImage
@@ -26,6 +27,7 @@ logging.basicConfig(
 
 def main():
     print(f"Python system logs can be found at {LOG_DIREC}")
+    LOGGER.info(f"Matlab engine version: {matlab_engine._supported_versions}.")
     parser = argparse.ArgumentParser(
         prog="CARE_on_data.py",
         description= "Use CARE (content-aware image restoration) to denoise data." \
@@ -97,59 +99,66 @@ def main():
         LOGGER.error(f"Could not initialize CAREInferenceSession from {THIS_RUN_ID}.{e.__class__.__name__}: {e}")
         raise FLAMECmdError(f"Could not initialize CAREInferenceSession from {THIS_RUN_ID}.{e.__class__.__name__}: {e}")
     
-    """IF IN MATLAB MODE"""
+    """IF IN MATLAB MODE -- ABANDONED FOR NOW"""
     if args.matlab == True:
-        try:
-            # MATLAB_ENGINE = matlab_engine.connect_matlab(f"MATLAB_{args.matlab_pid}")
-            names = matlab_engine.find_matlab()
-            if len(names) == 1: MATLAB_ENGINE = matlab_engine.connect_matlab()
-            else: MATLAB_ENGINE = matlab_engine.connect_matlab(f"MATLAB_{args.matlab_pid}")
-            LOGGER.info(f"Connected to MATLAB engine of PID {args.matlab_pid}.")
-        except Exception as e:
-            LOGGER.exception(f"Could not connect to MATLAB engine of PID {args.matlab_pid}.\n{e.__class__.__name__}: {e}")
-            raise FLAMEPyMatlabError(f"Could not connect to MATLAB engine of PID {args.matlab_pid}.\n{e.__class__.__name__}: {e}")
+        LOGGER.exception("Matlab mode is not currently supported. See https://github.com/AlexSath/BaluLab-CARE/issues/9")
+    #     try:
+    #         names = matlab_engine.find_matlab()
+    #         LOGGER.info(f"Available MATLAB names: {names}")
+    #         assert f"MATLAB_{args.matlab_pid}" in names, f"Could not find MATLAB engine with PID {args.matlab_pid}..."
+    #         MATLAB_ENGINE = matlab_engine.connect_matlab(
+    #             f"MATLAB_{args.matlab_pid}",
+    #         )
+    #         # MATLAB_ENGINE = matlab_engine.connect_matlab()
+    #         LOGGER.info(f"Connected to MATLAB engine of PID {args.matlab_pid}.")
+    #     except Exception as e:
+    #         LOGGER.exception(f"Could not connect to MATLAB engine of PID {args.matlab_pid}.\n{e.__class__.__name__}: {e}")
+    #         raise FLAMEPyMatlabError(f"Could not connect to MATLAB engine of PID {args.matlab_pid}.\n{e.__class__.__name__}: {e}")
         
-        # If in MATLAB mode, initialize the matlab variables.
-        matlab_engine_variable_names = [
-            "PYTHON_INFERENCE_ACTIVE", "PYTHON_SETUP_COMPLETE", "PYTHON_CURRENT_IMAGE"
-        ]
-        matlab_engine_variable_dict = {
-            x: None for x in matlab_engine_variable_names
-        }
-        try:
-            update_matlab_variables(
-                matlab_eng=MATLAB_ENGINE,
-                variable_dict=matlab_engine_variable_dict,
-                skip_missing=False
-            )
-        except Exception as e:
-            LOGGER.exception(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
-            raise FLAMEPyMatlabError(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
+    #     # If in MATLAB mode, initialize the matlab variables.
+    #     matlab_engine_variable_names = [
+    #         "PYTHON_INFERENCE_ACTIVE", "PYTHON_SETUP_COMPLETE", "PYTHON_CURRENT_IMAGE"
+    #     ]
+    #     matlab_engine_variable_dict = {
+    #         x: None for x in matlab_engine_variable_names
+    #     }
+    #     try:
+    #         LOGGER.info(f"Attempting to sync variables from MATLAB engine...")
+    #         update_matlab_variables(
+    #             matlab_eng=MATLAB_ENGINE,
+    #             variable_dict=matlab_engine_variable_dict,
+    #             skip_missing=False
+    #         )
+    #     except Exception as e:
+    #         LOGGER.exception(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
+    #         raise FLAMEPyMatlabError(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
         
-        LOGGER.info(f"Python setup is complete. Sending message to MATLAB engine through 'PYTHON_SETUP_COMPLETE' variable.")
-        MATLAB_ENGINE.workspace["PYTHON_SETUP_COMPLETE"] = True
+    #     LOGGER.info(f"Python setup is complete. Sending message to MATLAB engine through 'PYTHON_SETUP_COMPLETE' variable.")
+    #     MATLAB_ENGINE.workspace["PYTHON_SETUP_COMPLETE"] = True
         
-        # Setup is complete at this point, so start the main inference loop:
-        while MATLAB_ENGINE["PYTHON_INFERENCE_ACTIVE"]:
-            LOGGER.info(f"Python CARE inference is active...")
-            if not np.isnan(MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]):
-                try:
-                    assert os.path.isfile(MATLAB_ENGINE["PYTHON_CURRENT_IMAGE"]), f"Provided path in 'PYTHON_CURRENT_IMAGE' must be a file."
-                    LOGGER.info(f"Inferring on {MATLAB_ENGINE['PYTHON_CURRENT_IMAGE']}...")
-                    MATLAB_ENGINE.workspace["PYTHON_CURRENT_IMAGE"] = np.nan
-                except Exception as e:
-                    LOGGER.exception(f"Could not run inference on provided path {MATLAB_ENGINE['PYTHON_CURRENT_IMAGE']}.\n{e.__class__.__name__}: {e}")
-                    raise CAREInferenceError(f"Could not run inference on provided path {MATLAB_ENGINE['PYTHON_CURRENT_IMAGE']}.\n{e.__class__.__name__}: {e}")
+    #     # Setup is complete at this point, so start the main inference loop:
+    #     while MATLAB_ENGINE.workspace["PYTHON_INFERENCE_ACTIVE"]:
+    #         LOGGER.info(f"Python CARE inference is active...")
+    #         if not np.isnan(MATLAB_ENGINE.workspace["PYTHON_CURRENT_IMAGE"]):
+    #             try:
+    #                 assert os.path.isfile(MATLAB_ENGINE.workspace["PYTHON_CURRENT_IMAGE"]), f"Provided path in 'PYTHON_CURRENT_IMAGE' must be a file."
+    #                 LOGGER.info(f"Inferring on {MATLAB_ENGINE.workspace['PYTHON_CURRENT_IMAGE']}...")
+    #                 MATLAB_ENGINE.workspace["PYTHON_CURRENT_IMAGE"] = np.nan
+    #             except Exception as e:
+    #                 LOGGER.exception(f"Could not run inference on provided path {MATLAB_ENGINE.workspace['PYTHON_CURRENT_IMAGE']}.\n{e.__class__.__name__}: {e}")
+    #                 raise CAREInferenceError(f"Could not run inference on provided path {MATLAB_ENGINE.workspace['PYTHON_CURRENT_IMAGE']}.\n{e.__class__.__name__}: {e}")
 
-            try: # update MATLAB variables to sync processes after every iteration of the while loop
-                update_matlab_variables(
-                    matlab_eng=MATLAB_ENGINE,
-                    variable_dict=matlab_engine_variable_dict,
-                    skip_missing=False
-                )
-            except Exception as e:
-                LOGGER.exception(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
-                raise FLAMEPyMatlabError(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
+    #         try: # update MATLAB variables to sync processes after every iteration of the while loop
+    #             update_matlab_variables(
+    #                 matlab_eng=MATLAB_ENGINE,
+    #                 variable_dict=matlab_engine_variable_dict,
+    #                 skip_missing=False
+    #             )
+    #         except Exception as e:
+    #             LOGGER.exception(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
+    #             raise FLAMEPyMatlabError(f"Could not sync variables to matlab engine.\n{e.__class__.__name__}: {e}")
+        
+    #     LOGGER.info("Detected 'PYTHON_INFERENCE_ACTIVE' is false. Exiting Python CARE Inference")
 
     else: #IF NOT IN MATLAB MODE:
         if DATA_PATH_TYPE == "file":
