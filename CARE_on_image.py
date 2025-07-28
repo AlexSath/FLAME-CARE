@@ -1,17 +1,17 @@
-import os, json, logging, argparse, subprocess
+import os, json, logging, argparse, subprocess, glob
 from sys import argv
 from pathlib import Path # Python 3.5+
 from datetime import datetime
 
 import numpy as np
-import mlflow
+import tifffile as tiff
 from mlflow.client import MlflowClient
-import matlab
+# import matlab, mlflow
 from matlab import engine as matlab_engine
 
 from flame.image import FLAMEImage
 from flame.engine import CAREInferenceSession
-from flame.error import FLAMEMLFlowError, FLAMECmdError, FLAMEIOError, FLAMEPyMatlabError, CAREInferenceError
+from flame.error import *
 from flame.io import assert_path_exists, assert_direc_exists, assert_file_exists
 from flame.utils import set_up_tracking_server, update_matlab_variables
 
@@ -24,6 +24,55 @@ logging.basicConfig(
     encoding="utf-8",
     level=logging.DEBUG
 )
+
+def run_on_file(path: str, engine: CAREInferenceSession) -> None:
+    name, ext = os.path.splitext(path)
+    assert ext in [".tif", ".tiff"], f"Input path must be a tif. Provided: {path}"
+    try:
+        im = FLAMEImage(
+            impath=path, 
+            jsonext="tileData.txt"
+        )
+        LOGGER.info(f"Detected FLAMEImage for {path}.")
+    
+    except FLAMEImageError as e:
+        LOGGER.info(f"Could not load FLAMEImage from {path}, trying tifffile.")
+        
+        try: 
+            im = tiff.imread(path)
+        except Exception as e:
+            LOGGER.error(f"Could not load TIFF from {path}.\n{e.__class__.__name__}: {e}")
+            raise FLAMEIOError(f"Could not load TIFF from {path}.\n{e.__class__.__name__}: {e}")
+        
+        LOGGER.info(f"Successfully loaded tiff image from {path}.")
+    
+    except Exception as e:
+        LOGGER.exception(f"Could not load FLAMEImage of TIFF from {path}.\n{e.__class__.__name__}: {e}")
+        raise FLAMEIOError(f"Could not load FLAMEImage of TIFF from {path}.\n{e.__class__.__name__}: {e}")
+    
+    output = None
+    if type(im) == FLAMEImage:
+        try:
+            output = engine.predict_FLAME(im)
+            LOGGER.info(f"Successfully inferred CARE on {im}.")
+        except Exception as e:
+            LOGGER.exception(f"Could not infer on {im} using {engine}.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Could not infer on {im} using {engine}.\n{e.__class__.__name__}: {e}")
+        
+        tiff.imwrite(f"{name}_care{ext}", output)
+        LOGGER.info(f"Saved CARE predictions to {name}_care{ext}.")
+        
+    elif type(im) == tiff.TiffFile:
+        try:
+            output = engine.predict(im)
+            LOGGER.info(f"Successfully inferred CARE on {im}.")
+        except Exception as e:
+            LOGGER.exception(f"Could not infer on {im} using {engine}.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Could not infer on {im} using {engine}.\n{e.__class__.__name__}: {e}")
+        
+        tiff.imwrite(path, output)
+        LOGGER.info(f"Saved CARE predictions to {path}.")
+    
 
 def main():
     print(f"Python system logs can be found at {LOG_DIREC}")
@@ -52,13 +101,15 @@ def main():
     args = parser.parse_args()
 
     """PARAMETER INPUT VALIDATION"""
+    DATA_PATH_TYPE = None
     if args.data_path is not None:
-        DATA_PATH_TYPE = None
         assert_path_exists(args.data_path)
         try: 
             assert_file_exists(args.data_path)
             DATA_PATH_TYPE = "file"
         except FLAMEIOError as e: DATA_PATH_TYPE = "directory"
+    
+    assert DATA_PATH_TYPE is not None
     assert_direc_exists(args.mlflow_tracking_direc)
     
     """SET UP MLFLOW SERVER PROCESS"""
@@ -76,9 +127,9 @@ def main():
         REGISTERED_MODEL = CLIENT.get_registered_model(args.model_name)
 
         if args.model_version is None:
-            THIS_RUN_ID = REGISTERED_MODEL.latest_versions[-1].run_id
+            THIS_RUN_ID = REGISTERED_MODEL.latest_versions[-1].run_id # type: ignore
         else:
-            THIS_RUN_ID = REGISTERED_MODEL.latest_versions[args.model_version - 1].run_id
+            THIS_RUN_ID = REGISTERED_MODEL.latest_versions[args.model_version - 1].run_id # type: ignore
     except Exception as e:
         LOGGER.error(
             f"Could not get {args.model_name} v.{args.model_version} from registered models at provided tracking server.\n" \
@@ -161,10 +212,19 @@ def main():
     #     LOGGER.info("Detected 'PYTHON_INFERENCE_ACTIVE' is false. Exiting Python CARE Inference")
 
     else: #IF NOT IN MATLAB MODE:
+        paths = None
         if DATA_PATH_TYPE == "file":
-            pass
+            paths = [args.data_path]
         elif DATA_PATH_TYPE == "directory":
-            pass
+            paths = glob.glob(os.path.join(args.data_path, "*.tif"), recursive=True)
+            paths += glob.glob(os.path.join(args.data_path, "*.tif"), recursive=True)
+        assert paths is not None
+        
+        for path in paths:
+            run_on_file(
+                path=path,
+                engine=ENGINE
+            )
         else:
             LOGGER.exception(f"Did not recognize '--data-path' of type {DATA_PATH_TYPE} ({type(args.data_path)})")
             raise FLAMECmdError(f"Did not recognize '--data-path' of type {DATA_PATH_TYPE} ({type(args.data_path)})")

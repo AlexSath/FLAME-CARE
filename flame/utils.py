@@ -14,7 +14,7 @@ LOGGER = logging.getLogger("UTIL")
 def _int_or_int_array(
         data: Any, 
         logger: Union[Logger, NoneType]=None,
-        dtype: Union[int, np.integer]=int,
+        dtype: Union[int, np.integer]=int, # type: ignore
         accept_nonetype: bool=False,
     ) -> Union[NDArray[np.integer], np.integer, int]:
     """
@@ -25,10 +25,10 @@ def _int_or_int_array(
         return data
     
     try:
-        proc_data = dtype(data)
+        proc_data = dtype(data) # type: ignore
     except TypeError as e:
         try:
-            proc_data = np.array(data, dtype=dtype)
+            proc_data = np.array(data, dtype=dtype) # type: ignore
         except ValueError as e:
             if logger is not None:
                 logger.exception(f"Could not convert {data} to int or int array.\nERROR: {e}")
@@ -39,7 +39,7 @@ def _int_or_int_array(
 def _validate_int(
         data: Any, 
         logger: Union[Logger, NoneType]=None,
-        dtype: Union[int, np.integer]=int,
+        dtype: Union[int, np.integer]=int, # type: ignore
         accept_nonetype: bool=False,
         accept_float: bool=False,
     ) -> Union[np.integer, int]:
@@ -51,7 +51,7 @@ def _validate_int(
         return data
     
     try:
-        proc_data = dtype(data)
+        proc_data = dtype(data) # type: ignore
         if not accept_float:
             assert not np.issubdtype(type(data), np.floating), f"Data {data} is float, but accept_float is False"
     except TypeError as e:
@@ -64,7 +64,7 @@ def _validate_int(
 def _validate_int_greater_than_zero(
         data: Any, 
         logger: Union[Logger, NoneType]=None,
-        dtype: Union[int, np.integer]=int,
+        dtype: Union[int, np.integer]=int, # type: ignore
         accept_nonetype: bool=False,
         accept_float: bool=False,
     ) -> Union[np.integer, int]:
@@ -98,7 +98,7 @@ def _validate_int_greater_than_zero(
 def _float_or_float_array(
         data: Any, 
         logger: Union[Logger, NoneType]=None, 
-        dtype: Union[float, np.floating]=float,
+        dtype: Union[float, np.floating]=float, # type: ignore
         accept_nonetype: bool=False
     ) -> Union[NDArray[np.floating], np.floating, float]:
     """
@@ -109,10 +109,10 @@ def _float_or_float_array(
         return data
     
     try:
-        proc_data = dtype(data)
+        proc_data = dtype(data) # type: ignore
     except TypeError as e:
         try:
-            proc_data = np.array(data, dtype=dtype)
+            proc_data = np.array(data, dtype=dtype) # type: ignore
         except ValueError as e:
             if logger is not None:
                 logger.exception(f"Could not convert {data} to float or float array.\nERROR: {e}")
@@ -145,12 +145,12 @@ def _validate_is_greater_than_zero(
 
 
 def min_max_norm(
-        arr: np.array, 
-        mini: Union[np.array, list, int, float], 
-        maxi: Union[np.array, list, int, float], 
+        arr: NDArray, 
+        mini: Union[NDArray, list, int, float], 
+        maxi: Union[NDArray, list, int, float], 
         sigma: float=1e-20,
-        dtype: Union[np.floating]=np.float32
-    ) -> NDArray[Union[np.floating]]:
+        dtype: Union[np.floating[Any], np.integer[Any]]=np.float32 # type: ignore
+    ) -> NDArray[Union[np.floating, np.integer]]:
     """
     Min-Max normalized given array based on provided 'mini' and 'maxi'
     If mini and maxi are arrays 
@@ -171,8 +171,8 @@ def _min_max_norm_array(
         mini: NDArray[Union[np.floating, np.integer]], 
         maxi: NDArray[Union[np.floating, np.integer]],
         sigma: float=1e-20,
-        dtype: Union[np.floating]=np.float32
-    ) -> NDArray[Union[np.floating]]:
+        dtype: Union[np.floating, np.integer]=np.float32 # type: ignore
+    ) -> NDArray[Union[np.floating, np.integer]]:
     """
     Min-max normalizing based on 'mini' and 'maxi' arrays.
     If 'mini' and 'maxi' are arrays, they must be 1 dimensional, and of equal size.
@@ -266,6 +266,7 @@ def _expand_dict_fields(data: dict) -> dict:
         split = k.split('-')
         for s in split[::-1]:
             pass
+    return new_data
 
 
 def set_up_tracking_server(ip: str, port: str, direc: str, log_path: str) -> subprocess.Popen:
@@ -351,13 +352,13 @@ def get_windows_user_path() -> str:
         ["wslvar", "USERPROFILE"],
         stdout=subprocess.PIPE
     )
-    windows_path = proc.stdout.read().decode("UTF-8").strip()
+    windows_path = proc.stdout.read().decode("UTF-8").strip() # type: ignore
 
     proc2 = subprocess.Popen(
         ["wslpath", windows_path],
         stdout=subprocess.PIPE
     )
-    return proc2.stdout.read().decode("UTF-8").strip()
+    return proc2.stdout.read().decode("UTF-8").strip() # type: ignore
 
 
 def on_wsl(version: str=platform.uname().release) -> bool:
@@ -378,7 +379,7 @@ def update_matlab_variables(matlab_eng: str, variable_dict: dict, skip_missing: 
     """
     for key in variable_dict.keys():
         try:
-            variable_dict[key] = matlab_eng.workspace[key]
+            variable_dict[key] = matlab_eng.workspace[key] # type: ignore
         except Exception as e:
             if skip_missing:
                 LOGGER.warning(f"Could not find {key} in {matlab_eng}. 'skip_missing' is True, so continuing...")
