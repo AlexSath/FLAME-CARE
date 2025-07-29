@@ -6,8 +6,9 @@ from datetime import datetime
 import numpy as np
 import tifffile as tiff
 from mlflow.client import MlflowClient
+from tqdm import tqdm
 # import matlab, mlflow
-from matlab import engine as matlab_engine
+# from matlab import engine as matlab_engine
 
 from flame.image import FLAMEImage
 from flame.engine import CAREInferenceSession
@@ -76,7 +77,7 @@ def run_on_file(path: str, engine: CAREInferenceSession) -> None:
 
 def main():
     print(f"Python system logs can be found at {LOG_DIREC}")
-    LOGGER.info(f"Matlab engine version: {matlab_engine._supported_versions}.")
+    # LOGGER.info(f"Matlab engine version: {matlab_engine._supported_versions}.")
     parser = argparse.ArgumentParser(
         prog="CARE_on_data.py",
         description= "Use CARE (content-aware image restoration) to denoise data." \
@@ -217,17 +218,25 @@ def main():
             paths = [args.data_path]
         elif DATA_PATH_TYPE == "directory":
             paths = glob.glob(os.path.join(args.data_path, "*.tif"), recursive=True)
-            paths += glob.glob(os.path.join(args.data_path, "*.tif"), recursive=True)
+            paths += glob.glob(os.path.join(args.data_path, "*.tiff"), recursive=True)
         assert paths is not None
-        
-        for path in paths:
-            run_on_file(
-                path=path,
-                engine=ENGINE
-            )
-        else:
-            LOGGER.exception(f"Did not recognize '--data-path' of type {DATA_PATH_TYPE} ({type(args.data_path)})")
-            raise FLAMECmdError(f"Did not recognize '--data-path' of type {DATA_PATH_TYPE} ({type(args.data_path)})")
+
+        if len(paths) == 0:
+            LOGGER.warning(f"No files with extension '.tif' or '.tiff' founds in {args.data_path}")
+
+        for path in tqdm(
+            paths,
+            desc="Images remaing",
+            total=len(paths)
+        ):
+            try:
+                run_on_file(
+                    path=path,
+                    engine=ENGINE
+                )
+            except Exception as e:
+                LOGGER.exception(f"Failed to infer on {path}.\n{e.__class__.__name__}: {e}")
+                raise CAREInferenceError(f"Failed to infer on {path}.\n{e.__class__.__name__}: {e}")
     
     MLFLOW_SERVER_PROCESS.kill()
 
