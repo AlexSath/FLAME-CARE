@@ -7,6 +7,7 @@ import numpy as np
 import tifffile as tiff
 from mlflow.client import MlflowClient
 from tqdm import tqdm
+from numpy import ndarray
 # import matlab, mlflow
 # from matlab import engine as matlab_engine
 
@@ -26,9 +27,13 @@ logging.basicConfig(
     level=logging.DEBUG
 )
 
-def run_on_file(path: str, engine: CAREInferenceSession) -> None:
+def run_on_file(path: str, engine: CAREInferenceSession, output_direc: str) -> None:
     name, ext = os.path.splitext(path)
+    imagename = os.path.basename(path)
+    outputpath = os.path.join(output_direc, imagename)
     assert ext in [".tif", ".tiff"], f"Input path must be a tif. Provided: {path}"
+    assert os.path.isdir(output_direc)
+    # CHECKING IO
     try:
         im = FLAMEImage(
             impath=path, 
@@ -51,28 +56,38 @@ def run_on_file(path: str, engine: CAREInferenceSession) -> None:
         LOGGER.exception(f"Could not load FLAMEImage of TIFF from {path}.\n{e.__class__.__name__}: {e}")
         raise FLAMEIOError(f"Could not load FLAMEImage of TIFF from {path}.\n{e.__class__.__name__}: {e}")
     
+    # INFERENCE
     output = None
-    if type(im) == FLAMEImage:
+    added_channel_dim = False
+    added_batch_dim = True
+    if isinstance(im, FLAMEImage):
         try:
             output = engine.predict_FLAME(im)
             LOGGER.info(f"Successfully inferred CARE on {im}.")
         except Exception as e:
             LOGGER.exception(f"Could not infer on {im} using {engine}.\n{e.__class__.__name__}: {e}")
             raise CAREInferenceError(f"Could not infer on {im} using {engine}.\n{e.__class__.__name__}: {e}")
-        
-        tiff.imwrite(f"{name}_care{ext}", output)
-        LOGGER.info(f"Saved CARE predictions to {name}_care{ext}.")
-        
-    elif type(im) == tiff.TiffFile:
+
+    
+    elif isinstance(im, ndarray):
+        if len(im.shape) == 2:
+            im = im[...,np.newaxis]
+            added_channel_dim = True
+        if len(im.shape) == 3: 
+            im = im[np.newaxis,...]
+            added_batch_dim = True
         try:
             output = engine.predict(im)
-            LOGGER.info(f"Successfully inferred CARE on {im}.")
+            LOGGER.info(f"Successfully inferred CARE on {im.__class__.__name__} of shape {im.shape} @{id(im)}.")
         except Exception as e:
-            LOGGER.exception(f"Could not infer on {im} using {engine}.\n{e.__class__.__name__}: {e}")
-            raise CAREInferenceError(f"Could not infer on {im} using {engine}.\n{e.__class__.__name__}: {e}")
+            LOGGER.exception(f"Could not infer on {im.__class__.__name__} of shape {im.shape} @{id(im)} using {engine}.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Could not infer on {im.__class__.__name__} of shape {im.shape} @{id(im)} using {engine}.\n{e.__class__.__name__}: {e}")
         
-        tiff.imwrite(path, output)
-        LOGGER.info(f"Saved CARE predictions to {path}.")
+        if added_channel_dim: output = output[...,0]
+        if added_batch_dim: output = output[0,...]
+    
+    tiff.imwrite(outputpath, output)
+    LOGGER.info(f"Saved CARE predictions to {path}.")
     
 
 def main():
@@ -89,6 +104,7 @@ def main():
     meta_group.add_argument("--matlab", action="store_true", help="Whether to coordinate with a running MATLAB/FLAME `sessionPostProcessing` thread.")
     meta_group.add_argument("--matlab_pid", required=("--matlab" in argv), help="The MATLAB process id to be used during engine linkage. Only required if '--matlab' requested.")
     meta_group.add_argument("--data-path", required=("--matlab" not in argv), help="The path to the data to infer on if '--matlab' is not requested.")
+    meta_group.add_argument("--overwrite", action="store_true", help="whether to overwrite the provided tiffs or save them in a separate folder at the same level in the file directory.")
     
     model_group = parser.add_argument_group("Model Information", description="Variables to configure the name and version of the requested CARE model.")
     model_group.add_argument("--model-name", required=True, type=str, choices=["CARE-1Channel"], help="The name of the 'Registered Model' to pull from.")
@@ -214,12 +230,24 @@ def main():
 
     else: #IF NOT IN MATLAB MODE:
         paths = None
+        output_directory = None
         if DATA_PATH_TYPE == "file":
             paths = [args.data_path]
+            output_directory = os.path.dirname(args.data_path)
         elif DATA_PATH_TYPE == "directory":
             paths = glob.glob(os.path.join(args.data_path, "*.tif"), recursive=True)
             paths += glob.glob(os.path.join(args.data_path, "*.tiff"), recursive=True)
+            output_directory = args.data_path
+
         assert paths is not None
+        assert output_directory is not None
+
+        if not args.overwrite:
+            output_directory += "_care"
+        LOGGER.info(f"Overwrite is {args.overwrite}; saving to {output_directory}...")
+        if not os.path.isdir(output_directory):
+            LOGGER.info(f"Output directory {output_directory} did not exist, so creating it...")
+            os.mkdir(output_directory)
 
         if len(paths) == 0:
             LOGGER.warning(f"No files with extension '.tif' or '.tiff' founds in {args.data_path}")
@@ -232,7 +260,8 @@ def main():
             try:
                 run_on_file(
                     path=path,
-                    engine=ENGINE
+                    engine=ENGINE,
+                    output_direc=output_directory
                 )
             except Exception as e:
                 LOGGER.exception(f"Failed to infer on {path}.\n{e.__class__.__name__}: {e}")
