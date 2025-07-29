@@ -288,9 +288,9 @@ def set_up_tracking_server(ip: str, port: str, direc: str, log_path: str) -> sub
         "--host", ip,
         "--port", port,
         "--serve-artifacts",
-        "--backend-store-uri", f"file:{os.path.sep*3}{direc}" if not on_wsl() else direc,
-        "--default-artifact-root", f"file:{os.path.sep*3}{direc}" if not on_wsl() else direc,
-        "--artifacts-destination", f"file:{os.path.sep*3}{direc}" if not on_wsl() else direc
+        "--backend-store-uri", f"file:{os.path.sep*3}{direc}",
+        "--default-artifact-root", f"file:{os.path.sep*3}{direc}",
+        "--artifacts-destination", f"file:{os.path.sep*3}{direc}"
     ]
 
     update_yaml_artifact_path(direc)
@@ -319,8 +319,14 @@ def change_root(root: str, to_change: str) -> str:
         to_change_last_index = to_change_split.index(root_direc_last)
         new = os.path.sep.join(root_direc_split + to_change_split[to_change_last_index+1:])
     except ValueError as e:
-        print(root, to_change)
-        raise
+        try:
+            assert os.path.isdir(root)
+
+            return root
+        except:
+            print(root, to_change)
+            LOGGER.error(f"ROOT: {root}, TO_CHANGE: {to_change}")
+            raise
     return new
 
 
