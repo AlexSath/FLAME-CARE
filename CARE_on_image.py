@@ -37,7 +37,10 @@ def run_on_file(path: str, engine: CAREInferenceSession, output_direc: str) -> N
     try:
         im = FLAMEImage(
             impath=path, 
-            jsonext="tileData.txt"
+            jsonext="tileData.txt",
+            checkFrames = False,
+            checkZs = True,
+            requireBidirectionalCorrection=True
         )
         LOGGER.info(f"Detected FLAMEImage for {path}.")
     

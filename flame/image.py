@@ -270,7 +270,7 @@ class FLAMEImage():
         return f"FLAME Image @{hex(id(self))} from {self.impath}"
     
 
-def is_FLAME_image(self, image) -> bool:
+def is_FLAME_image(image) -> bool:
         try:
             assert isinstance(image, FLAMEImage), f"Object {image} is not an instance of FLAMEImage."
             assert image.imShape is not None, f"FLAMEImage {image} was not properly initialized."
