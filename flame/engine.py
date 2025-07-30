@@ -15,6 +15,10 @@ from .image import FLAMEImage, is_FLAME_image
 from .error import CAREInferenceError, FLAMEImageError
 from .utils import min_max_norm, _float_or_float_array
 
+PATCH_OVERLAP_MAP = {
+    16: 4, 32: 8, 64: 16, 128: 32, 256: 64, 512: 128
+}
+
 class CAREInferenceSession():
     def __init__(
             self,
@@ -338,12 +342,13 @@ class CAREInferenceSession():
 
         self.logger.info(f"Inference using 1-99 percentile normalization")
         length = len(inference_images)
+        res = None
         for idx, image in enumerate(inference_images):
-            if is_FLAME_image(image):
+            if is_FLAME_image(image=image):
                 try:
                     self.logger.info(f"({idx}/{length}) - Inferring on FLAMEImage {image}...")
                     res = self.predict_FLAME(
-                        image=image, 
+                        image=image, # type: ignore
                         input_frames=FLAMEImage_input_frames
                     )
                 except Exception as e:
@@ -351,16 +356,30 @@ class CAREInferenceSession():
                     raise CAREInferenceError(f"FLAMEImage detected, but inference failed.\n{e.__class__.__name__}: {e}")
             else:
                 try:
-                    self.logger.info(f"({idx}/{length}) - Inferring on array (shape: {image.shape} | dtype: {image.dtype})")
+                    self.logger.info(f"({idx}/{length}) - Inferring on array (shape: {image.shape} | dtype: {image.dtype})") # type: ignore
                     res = self.predict(
-                        arr=image
+                        arr=image # type: ignore
                     )
                 except Exception as e:
                     self.logger.error(f"NDArray detected, but inference failed.\n{e.__class__.__name__}: {e}")
                     raise CAREInferenceError(f"NDArray detected, but inference failed.\n{e.__class__.__name__}: {e}")
         
+        if res is None: raise
         return res
 
+
+    def _get_patch_overlap(self, patch_dim: int) -> int:
+        if patch_dim < 16: return PATCH_OVERLAP_MAP[16]
+        if patch_dim > 512: return PATCH_OVERLAP_MAP[512]
+        try:
+            return PATCH_OVERLAP_MAP[patch_dim]
+        except KeyError as e:
+            key_list = list(PATCH_OVERLAP_MAP)
+            for kdx in range(len(PATCH_OVERLAP_MAP)):
+                if key_list[kdx] <= patch_dim:
+                    return key_list[kdx]
+            else:
+                raise
 
     def _get_patches(self, arr: NDArray) -> NDArray:
         """
@@ -379,6 +398,12 @@ class CAREInferenceSession():
         except Exception as e:
             self.logger.error(f"Could not retrieve patch dimensions from self.model_config.\n{e.__class__.__name__}: {e}")
             raise CAREInferenceError(f"Could not retrieve patch dimensions from self.model_config.\n{e.__class__.__name__}: {e}")
+        
+        try:
+            po = self._get_patch_overlap(patch_dim=patch_dim)
+        except Exception as e:
+            self.logger.error(f"Could not retrieve patch overlap.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Could not retrieve patch overlap.\n{e.__class__.__name__}: {e}")
 
         try:
             assert len(arr.shape) == 3, f"Input dimensions must be of size 3 (YXC), not {len(arr.shape)}."
@@ -391,33 +416,58 @@ class CAREInferenceSession():
         if patch_dim == input_y and patch_dim == input_x: return arr[np.newaxis, ...]
 
         # NOTE: This will still break if ONE of input arary dimensions matches the patch dimension, but the other doesn't.
+        # See issue #8 https://github.com/AlexSath/BaluLab-CARE/issues/8
 
         output = None
         start_x = 0
         start_y = 0
         while start_y + patch_dim < input_y:
             while start_x + patch_dim < input_x:
-                this_patch = arr[start_y:start_y+patch_dim, start_x:start_x+patch_dim, :]
+                if start_y == 0 and start_x == 0: # top left corner
+                    this_patch = arr[start_y:start_y+patch_dim, start_x:start_x+patch_dim, :]
+                    assert this_patch.shape == (128, 128, 1), f"{this_patch.shape}"
+                elif start_y == 0 and start_x != 0: # top of image
+                    this_patch = arr[start_y:start_y+patch_dim, start_x-po//2:start_x-po//2+patch_dim, :]
+                    assert this_patch.shape == (128, 128, 1), f"{this_patch.shape}"
+                elif start_y != 0 and start_x == 0: # left side of image (leftmost column, any y)
+                    this_patch = arr[start_y-po//2:start_y+patch_dim-po//2, start_x:start_x+patch_dim, :]
+                    assert this_patch.shape == (128, 128, 1), f"{this_patch.shape}"
+                else: # center of image
+                    this_patch = arr[start_y-po//2:start_y+patch_dim-po//2, start_x-po//2:start_x+patch_dim-po//2, :]
+                    assert this_patch.shape == (128, 128, 1), f"{this_patch.shape}"
                 if output is None: output = [this_patch]
                 else: output += [this_patch]
-                start_x += patch_dim
+                start_x += patch_dim - po
             
             # if x's don't go evenly into input dimension, then run code to ensure right of image is denoised..
-            if input_x % patch_dim != 0:
-                output += [arr[start_y:start_y+patch_dim, -patch_dim:, :]]
+            if input_x % patch_dim != 0: # rightmost column
+                if start_y == 0: # top right corner
+                    this_patch = arr[start_y:start_y+patch_dim, -patch_dim:, :]
+                    assert this_patch.shape == (128, 128, 1), f"{this_patch.shape}"
+                else: # right side
+                    this_patch = arr[start_y-po//2:start_y+patch_dim-po//2, -patch_dim:, :]
+                    assert this_patch.shape == (128, 128, 1), f"{this_patch.shape}"
+                output += [this_patch]
 
             start_x = 0
-            start_y += patch_dim
+            start_y += patch_dim - po
 
         # If y's don't go evenly into input dimension, then run code to ensure bottom of image is denoised.
         if input_y % patch_dim != 0:
             while start_x + patch_dim < input_x:
-                this_patch = arr[-patch_dim:, start_x:start_x+patch_dim, :]
+                if start_x == 0: # bottom left corner 
+                    this_patch = arr[-patch_dim:, start_x:start_x+patch_dim, :]
+                    assert this_patch.shape == (128, 128, 1), f"{this_patch.shape}"
+                else: # bottom side
+                    this_patch = arr[-patch_dim:, start_x-po//2:start_x+patch_dim-po//2, :]
+                    assert this_patch.shape == (128, 128, 1), f"{this_patch.shape}"
                 output += [this_patch]
-                start_x += patch_dim
+                start_x += patch_dim - po
             
-            if input_x % patch_dim != 0:
-                output += [arr[-patch_dim:, -patch_dim:, :]]
+            if input_x % patch_dim != 0: # bottom right corner
+                this_patch = arr[-patch_dim:, -patch_dim:, :]
+                assert this_patch.shape == (128, 128, 1), f"{this_patch.shape}"
+                output += [this_patch]
 
         try:
             assert output is not None, f"Output is NoneType. Not patches could be extracted. Check dimensions of image {arr.shape} and patch ({patch_dim}, {patch_dim}, C)"
@@ -429,7 +479,7 @@ class CAREInferenceSession():
             raise CAREInferenceError(f"Could not output extracted patches.\n{e.__class__.__name__}: {e}")
 
 
-    def _stitch_patches(self, patches: NDArray, final_dim: tuple[int]) -> NDArray:
+    def _stitch_patches(self, patches: NDArray, final_dim: tuple[int, int, int]) -> NDArray:
         """
         Description: _stitch_patches will take a patch array of shape (N, patch_y, patch_x, C)
         and stitch it back into a full-size image of shape 'final_dim'.
@@ -446,36 +496,69 @@ class CAREInferenceSession():
             self.logger.error(f"Could not inppack 'final_dim' of size {len(final_dim)} into Y,X,C.\n{e.__class__.__name__} {e}")
             raise CAREInferenceError(f"Could not inppack 'final_dim' of size {len(final_dim)} into Y,X,C.\n{e.__class__.__name__} {e}")
         
+        # get patch dimension
         assert patches.shape[-1] == input_c, f"Channels in patch array and final_dim do not match ({patches.shape[-1]} vs. {input_c})"
-
         assert patches.shape[1] == patches.shape[2], f"Rectangular patch detected (assuming axes NYXC). Only square patches are supported"
         patch_dim = patches.shape[1]
+
+        try: # get patch overlap
+            po = self._get_patch_overlap(patch_dim=patch_dim)
+        except Exception as e:
+            self.logger.error(f"Could not retrieve patch overlap.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Could not retrieve patch overlap.\n{e.__class__.__name__}: {e}")
+        
+
+        try:
+            patch_overlap = self._get_patch_overlap(patch_dim=patch_dim)
+        except Exception as e:
+            self.logger.error(f"Could not retrieve patch overlap.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Could not retrieve patch overlap.\n{e.__class__.__name__}: {e}")
 
         output = np.zeros(shape=final_dim, dtype=patches.dtype)
         this_y = 0
         this_x = 0
         patch_index = 0
-        while this_y + patch_dim < final_dim[0]:
-            while this_x + patch_dim < final_dim[1]:
-                output[this_y:this_y+patch_dim, this_x:this_x+patch_dim, :] = patches[patch_index,...]
+        while this_y + patch_dim < input_y:
+            while this_x + patch_dim < input_x:
+                # output[this_y:this_y+patch_dim, this_x:this_x+patch_dim, :] = patches[patch_index,...]
+                if this_x == 0 and this_y == 0: # top left corner
+                    output[this_y:this_y+patch_dim-po//2, this_x:this_x+patch_dim-po//2] = patches[patch_index, :-po//2, :-po//2, :] # crop bottom and right of patch
+                elif this_x == 0 and this_y != 0: # left side
+                    output[this_y:this_y+patch_dim-po, this_x:this_x+patch_dim-po//2] = patches[patch_index, po//2:-po//2, :-po//2, :] # crop top, bottom and right of patch
+                elif this_x != 0 and this_y ==0: # top of image
+                    output[this_y:this_y+patch_dim-po//2, this_x:this_x+patch_dim-po] = patches[patch_index, :-po//2, po//2:-po//2, :]
+                else: # middle of image in both axes
+                    output[this_y:this_y+patch_dim-po, this_x:this_x+patch_dim-po] = patches[patch_index, po//2:-po//2, po//2:-po//2, :] # crop all sides of patch
                 patch_index += 1
-                this_x += patch_dim
+                this_x += patch_dim - po
 
-            if final_dim[1] % patch_dim != 0:
-                output[this_y:this_y+patch_dim, -patch_dim:, :] = patches[patch_index,...]
+            # if patch size doesn't go evenly into x axis, ensure that right edge of image is still stitched
+            if input_x % patch_dim != 0:
+                # output[this_y:this_y+patch_dim, -patch_dim:, :] = patches[patch_index,...]
+                if this_y == 0: # top right corner
+                    output[this_y:this_y+patch_dim-po//2, -patch_dim+po//2:, :] = patches[patch_index,:-po//2,po//2:,:] # crop bottom and left of patch
+                else: # right edge; middle of y axis (right side of image)
+                    output[this_y:this_y+patch_dim-po, -patch_dim+po//2:, :] = patches[patch_index,po//2:-po//2,po//2:] # crop top, bottom, and left of patch
                 patch_index += 1
 
             this_x = 0
-            this_y += patch_dim
+            this_y += patch_dim - po
 
-        if final_dim[0] % patch_dim != 0:
-            while this_x + patch_dim < final_dim[1]:
-                output[-patch_dim:, this_x:this_x+patch_dim, :] = patches[patch_index,...]
+        # bottom row (if patch size doesn't go evenly into y axis)
+        if input_y % patch_dim != 0:
+            while this_x + patch_dim < input_x:
+                # output[-patch_dim:, this_x:this_x+patch_dim, :] = patches[patch_index,...]
+                if this_x == 0: # bottom left corner
+                    output[-patch_dim+po//2:, this_x:this_x+patch_dim-po//2, :] = patches[patch_index,po//2:,:-po//2,:] # crop top and right of patch
+                else:
+                    output[-patch_dim+po//2:, this_x:this_x+patch_dim-po, :] = patches[patch_index,po//2:,po//2:-po//2,:] # crop top, left, and right of patch
                 patch_index += 1
-                this_x += patch_dim
+                this_x += patch_dim - po
 
-            if final_dim[1] % patch_dim != 0:
-                output[-patch_dim:, -patch_dim:, :] = patches[patch_index,...]
+            # last corner (if patch size doesn't go evenly into x axis)
+            if input_x % patch_dim != 0:
+                # output[-patch_dim:, -patch_dim:, :] = patches[patch_index,...]
+                output[-patch_dim+po//2:, -patch_dim+po//2:, :] = patches[patch_index,po//2:,po//2:,:] # crop top and left of patch
                 patch_index += 1
 
         return output
