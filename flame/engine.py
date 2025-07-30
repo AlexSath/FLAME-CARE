@@ -1,7 +1,7 @@
 import os, logging, json, glob, gc
 from time import time
 from shutil import rmtree
-from typing import Union
+from typing import Union, Any
 
 import onnx
 import onnxruntime as ort
@@ -160,11 +160,11 @@ class CAREInferenceSession():
             self.logger.info(f"Model input: Name-{self.input_name} | Shape-{self.input_shape} | DType-{self.input_dtype}")
         except Exception as e:
             self.logger.error(f"Could not initialize Model Inference Session.\n{e.__class__.__name__}: {e}")
-            raise CAREInferenceSession(f"Could not initialize Model Inference Session.\n{e.__class__.__name__}: {e}")
+            raise CAREInferenceError(f"Could not initialize Model Inference Session.\n{e.__class__.__name__}: {e}")
         return ort_session
     
     
-    def _validate_FLAME_images(self, inference_images: list) -> dict:
+    def _validate_FLAME_images(self, inference_images: list) -> list:
         new_list = []
         for image in inference_images:
             if is_FLAME_image(image): new_list.append(image)
@@ -172,7 +172,7 @@ class CAREInferenceSession():
         return new_list
     
 
-    def predict(self, arr: NDArray) -> NDArray:
+    def predict(self, arr: NDArray[Any]) -> NDArray:
         """
         Assumes array input of shape NYXC. Will break Y and X dimension into patches necessary for
         inference by the ONNX model in this inference session.
@@ -184,8 +184,9 @@ class CAREInferenceSession():
         """
         assert arr.ndim == 4, f"Input array must have 4 dimensions, not {arr.ndim} dimensions of shape {arr.shape}"
         SINGLE_CHANNEL_INFER = True # In the beginning, assume that each channel will be inferred upon one-by-one.
-        if self.input_shape[-1] != 1: # if the ONNX input shape is not 1, that means the model was trained for a specific number of channels.
-            assert arr.shape[-1] == self.input_shape[-1], f"Array channel dim {arr.shape[-1]} does not match ONNX input channel dim {self.input_shape[-1]} (assumption: NYXC)."
+        # if the ONNX input shape is not 1, that means the model was trained for a specific number of channels.
+        if self.input_shape[-1] != 1: # type: ignore
+            assert arr.shape[-1] == self.input_shape[-1], f"Array channel dim {arr.shape[-1]} does not match ONNX input channel dim {self.input_shape[-1]} (assumption: NYXC)." # type: ignore
             SINGLE_CHANNEL_INFER = False
             self.logger.info(f"Detected multiple channel inference. Inferring on all channels at the same time.")
         else: self.logger.info(f"Detected single channel inference. Running inference on each channel one-at-a-time.")
@@ -246,7 +247,7 @@ class CAREInferenceSession():
     def predict_FLAME(
             self, 
             image: FLAMEImage, 
-            input_frames: int=None,
+            input_frames: Union[int, None]=None,
             # input_min_override,
             # input_max_override,
             # output_min_override,
@@ -334,7 +335,7 @@ class CAREInferenceSession():
         return output_image
 
     
-    def inference_generator(self, inference_images: list[FLAMEImage | NDArray], FLAMEImage_input_frames: int=None):
+    def inference_generator(self, inference_images: list[FLAMEImage | NDArray], FLAMEImage_input_frames: Union[int, None]=None):
         """
         Will yield inferred-upon images one-by-one.
         Assumes 1-99 pcttile normalization.
@@ -381,7 +382,7 @@ class CAREInferenceSession():
             else:
                 raise
 
-    def _get_patches(self, arr: NDArray) -> NDArray:
+    def _get_patches(self, arr: NDArray[Any]) -> NDArray:
         """
         Description: _get_patches will break down an input image (as an NDArray)
         into patches that can be inferred upon. Patch dimensions will be that of the
@@ -447,7 +448,7 @@ class CAREInferenceSession():
                 else: # right side
                     this_patch = arr[start_y-po//2:start_y+patch_dim-po//2, -patch_dim:, :]
                     assert this_patch.shape == (128, 128, 1), f"{this_patch.shape}"
-                output += [this_patch]
+                output += [this_patch] # type: ignore
 
             start_x = 0
             start_y += patch_dim - po
@@ -461,13 +462,13 @@ class CAREInferenceSession():
                 else: # bottom side
                     this_patch = arr[-patch_dim:, start_x-po//2:start_x+patch_dim-po//2, :]
                     assert this_patch.shape == (128, 128, 1), f"{this_patch.shape}"
-                output += [this_patch]
+                output += [this_patch] # type: ignore
                 start_x += patch_dim - po
             
             if input_x % patch_dim != 0: # bottom right corner
                 this_patch = arr[-patch_dim:, -patch_dim:, :]
                 assert this_patch.shape == (128, 128, 1), f"{this_patch.shape}"
-                output += [this_patch]
+                output += [this_patch] # type: ignore
 
         try:
             assert output is not None, f"Output is NoneType. Not patches could be extracted. Check dimensions of image {arr.shape} and patch ({patch_dim}, {patch_dim}, C)"
@@ -479,7 +480,7 @@ class CAREInferenceSession():
             raise CAREInferenceError(f"Could not output extracted patches.\n{e.__class__.__name__}: {e}")
 
 
-    def _stitch_patches(self, patches: NDArray, final_dim: tuple[int, int, int]) -> NDArray:
+    def _stitch_patches(self, patches: NDArray[Any], final_dim: tuple[int, int, int]) -> NDArray:
         """
         Description: _stitch_patches will take a patch array of shape (N, patch_y, patch_x, C)
         and stitch it back into a full-size image of shape 'final_dim'.
