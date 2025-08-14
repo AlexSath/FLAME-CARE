@@ -1,0 +1,7 @@
+.. toctree:: 
+    :maxdepth: 2
+
+    README_WINDOWS_INSTALL
+    README_MATLAB
+    README_WSL_INSTALL
+    README_CMDLINE
