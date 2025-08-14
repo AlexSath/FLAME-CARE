@@ -1,13 +1,18 @@
-# Install on WSL (Training & Command-Line Inference Only)
+=======================================================
+Install on WSL (Training & Command-Line Inference Only)
+=======================================================
 
-## Installing WSL
+Installing WSL
+^^^^^^^^^^^^^^
 
 Ensure you install WSL based on Ubuntu 24.04
 
-## Setting up WSL
-```
-sudo apt install wslu
-```
+Setting up WSL
+^^^^^^^^^^^^^^
+
+::
+    sudo apt install wslu
+
 
 # Install on Windows (Command-Line Inference & MATLAB Inference)
 

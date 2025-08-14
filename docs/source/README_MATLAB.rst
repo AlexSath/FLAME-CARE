@@ -22,7 +22,7 @@ of information between two processes is as follows:
 for this repository. If using a default setup, the repository uses Python 3.12, which as of July 2025 requires
 MATLAB 2024b or newer.
 
-Read more: `MATLAB Python Version Compatibility <https://www.mathworks.com/support/requirements/python-compatibility.html`_
+Read more: `MATLAB Python Version Compatibility <https://www.mathworks.com/support/requirements/python-compatibility.html>`_
 
 To understand how Python Connects to the MATLAB Engine more generally:
  - `MATLAB Engine Documentation <https://www.mathworks.com/help/matlab/matlab_external/connect-python-to-running-matlab-session.html>`_
