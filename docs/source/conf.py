@@ -32,11 +32,11 @@ linkcheck_allowed_redirects = {
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "furo"
-html_title = "Esbonio Demo"
+html_title = "CARE for FLAME"
 html_theme_options = {
-    "source_repository": "https://github.com/swyddfa/esbonio",
-    "source_branch": "develop",
-    "source_directory": "lib/esbonio/tests/workspaces/demo/",
+    "source_repository": "https://github.com/AlexSath/FLAME-CARE",
+    "source_branch": "main",
+    # "source_directory": "lib/esbonio/tests/workspaces/demo/",
 }
 
 

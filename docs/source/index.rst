@@ -1,5 +1,4 @@
-.. toctree:: 
-    :maxdepth: 2
+.. toctree::
 
     about
     install/index
