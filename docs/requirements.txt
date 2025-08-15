@@ -5,8 +5,7 @@ sphinx-inline-tabs
 sphinx-issues
 sphinxcontrib-towncrier
 myst-parser
-html-image
-html-admonition
+html
 lutra
 furo
 
