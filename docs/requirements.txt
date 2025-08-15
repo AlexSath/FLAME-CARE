@@ -4,8 +4,6 @@ sphinx-copybutton
 sphinx-inline-tabs
 sphinx-issues
 sphinxcontrib-towncrier
-html-image
-html-admonition
 myst-parser
 colon-fence
 lutra
