@@ -1,6 +1,6 @@
-==========================
-CARE_on_image.py Help Menu
-==========================
+=====================================
+CARE_on_image.py Command-Line Options
+=====================================
 
 From help menu of CARE_on_data.py::
 
