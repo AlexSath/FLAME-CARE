@@ -4,13 +4,20 @@ from sphinx.application import Sphinx
 project = "FLAME-CARE docs"
 authors = "Alexandre R. Sathler"
 release = "1.0"
+copyright = "Lonlinear Optical Microscopy Lab @ UC Irvine"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
     "sphinx.ext.intersphinx",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.todo",
     "myst_parser",
+    "sphinx_copybutton",
+    "sphinx_inline_tabs",
+    "sphinxcontrib.towncrier",
+    "sphinx_issues",
 ]
 
 templates_path = ["_templates"]
