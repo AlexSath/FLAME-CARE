@@ -16,6 +16,11 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.todo",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.extlinks",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.viewcode",
+    # other
+    "furo.sphinxext",
     # third-party extensions
     "myst_parser",
     "sphinx_copybutton",
@@ -42,7 +47,7 @@ linkcheck_allowed_redirects = {
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-# html_theme = "furo"
+html_theme = "furo"
 html_title = "CARE for FLAME"
 html_theme_options = {
     "source_repository": "https://github.com/AlexSath/FLAME-CARE",
