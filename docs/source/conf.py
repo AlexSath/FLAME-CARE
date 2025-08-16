@@ -1,7 +1,9 @@
 from docutils import nodes
 from sphinx.application import Sphinx
-import os
+import os, sys
 from typing import Dict, Any
+
+sys.path.insert(0, os.path.abspath("../.."))
 
 project = "FLAME-CARE"
 authors = "Alexandre R. Sathler"
@@ -27,7 +29,12 @@ extensions = [
     "sphinx_inline_tabs",
     "sphinxcontrib.towncrier",
     "sphinx_issues",
+    # Autodoc summary generation
+    # See: https://stackoverflow.com/questions/2701998/automatically-document-all-modules-recursively-with-sphinx-autodoc
+    'sphinx.ext.autodoc',  # Core library for html generation from docstrings
+    'sphinx.ext.autosummary',  # Create neat summary tables
 ]
+autosummary_generate = True
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "env", ".tox", "README.md"]
