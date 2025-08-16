@@ -1,7 +1,7 @@
 from docutils import nodes
 from sphinx.application import Sphinx
 
-project = "FLAME-CARE docs"
+project = "FLAME-CARE"
 authors = "Alexandre R. Sathler"
 release = "1.0"
 copyright = "Lonlinear Optical Microscopy Lab @ UC Irvine"
@@ -20,7 +20,7 @@ extensions = [
     # Our custom extension, only meant for Furo's own documentation.
     "furo.sphinxext",
     # External stuff
-    "myst_parser",
+    # "myst_parser",
     "sphinx_copybutton",
     "sphinx_design",
     "sphinx_inline_tabs",
@@ -32,7 +32,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "env", ".tox", "README.m
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "sphinx": ("https://www.sphinx-doc.org/en/master", None),
-    "myst": ("https://myst-parser.readthedocs.io/en/latest", None),
+    # "myst": ("https://myst-parser.readthedocs.io/en/latest", None),
 }
 
 
