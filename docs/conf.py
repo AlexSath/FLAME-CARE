@@ -37,7 +37,7 @@ extensions = [
 ]
 autosummary_generate = True
 
-autodoc_mock_imports = ["numpy"]
+autodoc_mock_imports = ["numpy", "natsort", "onnx", "onnxruntime", "mlflow", "skimage", "tifffile", "pandas"]
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "env", ".tox", "README.md"]
