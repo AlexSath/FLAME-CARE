@@ -7,4 +7,4 @@ Python Documentation
     :template: custom-module-template.rst
     :recursive:
     
-    flame-care
+    ../flame-care
