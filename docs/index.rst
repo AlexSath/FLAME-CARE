@@ -15,11 +15,4 @@ taken using a Fast, Large-Area Multiphoton Exoscope (FLAME).
     about
     install/index
     usage/index
-
-
-.. autosummary::
-    :toctree: _autosummary
-    :template: custom-module-template.rst
-    :recursive:
-    
-    flame-care
+    documentation
