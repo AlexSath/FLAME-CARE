@@ -1,3 +1,5 @@
+"A package for FLAME image restoration"
+
 # TileData and FLAMEImage classes will live in namespace __all__
 # This means they can be imported as: "from flame import TileData, FLAMEImage"
 from .tile import TileData
