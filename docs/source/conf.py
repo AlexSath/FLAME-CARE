@@ -10,20 +10,16 @@ copyright = "Lonlinear Optical Microscopy Lab @ UC Irvine"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    # Sphinx's own extensions
+    # first-party extensions
     "sphinx.ext.autodoc",
-    "sphinx.ext.extlinks",
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.mathjax",
     "sphinx.ext.todo",
-    "sphinx.ext.viewcode",
-    # Our custom extension, only meant for Furo's own documentation.
-    "furo.sphinxext",
-    # External stuff
-    # "myst_parser",
+    "sphinx.ext.intersphinx",
+    # third-party extensions
+    "myst_parser",
     "sphinx_copybutton",
-    "sphinx_design",
     "sphinx_inline_tabs",
+    "sphinxcontrib.towncrier",
+    "sphinx_issues",
 ]
 
 templates_path = ["_templates"]
