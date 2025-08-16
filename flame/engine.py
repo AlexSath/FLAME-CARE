@@ -335,7 +335,7 @@ class CAREInferenceSession():
         return output_image
 
     
-    def inference_generator(self, inference_images: list[FLAMEImage | NDArray], FLAMEImage_input_frames: Union[int, None]=None):
+    def inference_generator(self, inference_images: list[Union[FLAMEImage, NDArray]], FLAMEImage_input_frames: Union[int, None]=None):
         """
         Will yield inferred-upon images one-by-one.
         Assumes 1-99 pcttile normalization.
