@@ -3,8 +3,8 @@
 .. toctree:: 
     :hidden:
 
-    ./windows
-    ./wsl
+    windows
+    wsl
 
 =======
 Install
