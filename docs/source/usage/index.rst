@@ -3,8 +3,8 @@
 .. toctree::
     :hidden:
 
-    ./cmdline
-    ./matlab
+    cmdline
+    matlab
 
 =====
 Usage
