@@ -3,7 +3,8 @@ from sphinx.application import Sphinx
 import os, sys
 from typing import Dict, Any
 
-sys.path.insert(0, os.path.abspath("../.."))
+sys.path.insert(0, os.path.abspath(".."))
+# print(os.path.abspath("../.."))
 
 project = "FLAME-CARE"
 authors = "Alexandre R. Sathler"
