@@ -5,6 +5,8 @@
     windows
     wsl
 
+:hide-toc:
+
 =======
 Install
 =======
