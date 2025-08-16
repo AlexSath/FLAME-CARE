@@ -2,14 +2,11 @@
 
 .. toctree::
     :hidden:
-    :glob:
 
     self
     about
     install/index
-    install/*
     usage/index
-    usage/*
 
 ==============
 CARE for FLAME
