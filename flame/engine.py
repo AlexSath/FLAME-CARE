@@ -20,6 +20,37 @@ PATCH_OVERLAP_MAP = {
 }
 
 class CAREInferenceSession():
+    """
+    Class CAREInference Session
+
+    Attributes
+    ----------
+    logger : logging.Logger
+        Logger for the inference engine
+    execution_providers : list[str]
+        List of available execution providers for onnxruntime session for the inference engine
+    model_config : Dict
+        Model configuration information loaded from provided path
+    dataset_config : Dict
+        Dataset configuration information loaded from provided path
+    input_name : str
+        Name of the input layer in the ONNX/TRT engine
+    input_shape : tuple
+        Shape of the input tensor to the ONNX/TRT engine
+    input_dtype : 
+        Data types of the input tensor to the ONNX/TRT engine
+    inferenceSession : onnxruntime.InferenceSession
+        onnxruntime InferenceSession object
+    from_mlflow : bool
+        Whether the CAREInferenceSession is loaded from an FLFlow run.
+    mlflow_tracking_uri : str
+        The MLFlow tracking URI mapping to the MLFlow tracking server used to initialize the CAREInferenceSession object.
+    mlflow_run_id : str
+        The MLFlow run ID corresponding to the MLFlow run used to initialized the CAREInferenceSession object.
+    mlflow_run_name : str
+        The name of the MLFlow run used to initialize the CAREInferenceSession object.
+    
+    """
     def __init__(
             self,
             model_path: str, #onnx only, for now
@@ -27,10 +58,6 @@ class CAREInferenceSession():
             dataset_config_path: str,
             cpu_ok: bool=False,
         ) -> None:
-        """
-        Class CAREInference Session
-        
-        """
         self.logger = logging.getLogger("ENGINE")
         self.execution_providers = None
         self._check_execution_providers(cpu_ok)
