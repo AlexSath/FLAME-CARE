@@ -6,7 +6,7 @@ from typing import Dict, Any
 project = "FLAME-CARE"
 authors = "Alexandre R. Sathler"
 release = "1.0"
-copyright = "Lonlinear Optical Microscopy Lab @ UC Irvine"
+copyright = "Nonlinear Optical Microscopy Lab @ UC Irvine"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -42,7 +42,7 @@ linkcheck_allowed_redirects = {
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "furo"
+# html_theme = "furo"
 html_title = "CARE for FLAME"
 html_theme_options = {
     "source_repository": "https://github.com/AlexSath/FLAME-CARE",
