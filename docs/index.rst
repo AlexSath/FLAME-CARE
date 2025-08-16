@@ -15,4 +15,4 @@ taken using a Fast, Large-Area Multiphoton Exoscope (FLAME).
     about
     install/index
     usage/index
-    documentation
+    api
