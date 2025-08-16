@@ -46,7 +46,7 @@ requires = [
 ]
 
 [tool.setuptools]
-py-modules = ["flame"]
+py-modules = []
 
 [tool.esbonio.sphinx]
 buildCommand = ["sphinx-build", "-M", "html", "./docs", "./_build", "--nitpicky", "--verbose"]
