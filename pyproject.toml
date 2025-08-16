@@ -38,7 +38,7 @@ requires = [
 	"scipy",
 	"scikit-image",
 	"scikit-learn",
-	"opencv-python==4.10",
+	"opencv-python==4.10.0.82",
 	"pillow==11.3",
 	"numpy>2",
 	"pandas>2",

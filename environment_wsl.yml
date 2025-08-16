@@ -200,7 +200,7 @@ dependencies:
   - notebook-shim=0.2.4=pyhd8ed1ab_1
   - numexpr=2.10.1=py312h3c60e43_0
   - onnx=1.17.0=py312he36ed58_1
-  - opencv-python=4.10.0
+  - opencv-python=4.10.0.82
   - openh264=2.1.1=h4ff587b_0
   - openjpeg=2.5.2=he7f1fd0_0
   - openldap=2.6.4=h42fbc30_0
