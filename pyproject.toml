@@ -45,6 +45,9 @@ requires = [
 	"jupyterlab>4"
 ]
 
+[tool.setuptools]
+py-modules = ["flame"]
+
 [tool.esbonio.sphinx]
 buildCommand = ["sphinx-build", "-M", "html", "./docs", "./_build", "--nitpicky", "--verbose"]
 
