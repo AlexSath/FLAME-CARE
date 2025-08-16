@@ -5,6 +5,8 @@
     cmdline
     matlab
 
+:hide-toc:
+
 =====
 Usage
 =====
