@@ -1,11 +1,9 @@
-:hide-toc:
+=======
+Install
+=======
 
 .. toctree:: 
     :hidden:
 
     windows
     wsl
-
-=======
-Install
-=======

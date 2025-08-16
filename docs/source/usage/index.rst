@@ -1,11 +1,9 @@
-:hide-toc:
+=====
+Usage
+=====
 
 .. toctree::
     :hidden:
 
     cmdline
     matlab
-
-=====
-Usage
-=====
