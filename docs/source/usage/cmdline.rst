@@ -1,8 +1,8 @@
-=====================================
-CARE_on_image.py Command-Line Options
-=====================================
+======================
+Command-Line Interface
+======================
 
-From help menu of CARE_on_data.py::
+From help menu of ``CARE_on_data.py``::
 
   usage: CARE_on_data.py [-h] [--matlab] [--matlab_pid MATLAB_PID] --data-path DATA_PATH --model-name {CARE-1Channel} [--model-version MODEL_VERSION]
                         --mlflow-tracking-direc MLFLOW_TRACKING_DIREC [--mlflow-tracking-ip MLFLOW_TRACKING_IP] [--mlflow-tracking-port MLFLOW_TRACKING_PORT]
