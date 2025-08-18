@@ -46,7 +46,7 @@ This is because while the conda installation may have been successful, the insta
 * **Linux/MacOS**: Usually miniconda installs itself in your path by default. If it didn't, that usually means the install failed. Just in case, you can check `this answer <https://askubuntu.com/questions/849470/how-do-i-activate-a-conda-environment-in-my-bashrc>`_ on Stack Exchange.
 
 
-1. Create CARE Environment
+3. Create CARE Environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 With a conda-initialized shell, navigate to the directory where this repository is installed using ``cd`` commands. `Detailed Tutorial <https://www.lifewire.com/change-directories-in-command-prompt-5185508>`_.
 
@@ -108,7 +108,7 @@ Then, you can re-run the like to re-create the ``care`` conda environment with t
 2. Unzip the zip file and copy ``bin``, ``lib``, and ``include`` folders to ``C:\Program Files\NVIDIA\CUDNN\v8.9.7``.
 3. Add ``C:\Program Files\NVIDIA\CUDNN\v8.9.7\bin`` to your PATH
 
-4. Installing TensorRT 10.11.0
+6. Installing TensorRT 10.11.0
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **NOTE:** As of July 2025, all GPUs with compute capability higher than 7.5 are supported by TensorRT 10.11, but this may change in the future.
