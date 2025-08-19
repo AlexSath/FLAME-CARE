@@ -6,4 +6,3 @@ Install
 
     windows
     wsl
-    mlflow
