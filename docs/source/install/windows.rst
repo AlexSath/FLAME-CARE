@@ -9,7 +9,16 @@ Visit MATLAB downloads on downloads site. `Link <https://www.mathworks.com/downl
 
 Download & Install R2024b on your Windows machine.
 
-2. Install Conda
+2. Download Source Code
+^^^^^^^^^^^^^^^^^^^^^^^
+
+a. Clone Repository through GitHub CLI (Recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+b. Download Repository ZIP File (Lacks Version Control)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+3. Install Conda
 ^^^^^^^^^^^^^^^^
 Visit the `Anaconda website <https://www.anaconda.com/download/success>`_ and download the latest Windows Miniconda installer. `Direct Link <https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe>`_.
 
@@ -46,7 +55,7 @@ This is because while the conda installation may have been successful, the insta
 * **Linux/MacOS**: Usually miniconda installs itself in your path by default. If it didn't, that usually means the install failed. Just in case, you can check `this answer <https://askubuntu.com/questions/849470/how-do-i-activate-a-conda-environment-in-my-bashrc>`_ on Stack Exchange.
 
 
-3. Create CARE Environment
+4. Create CARE Environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 With a conda-initialized shell, navigate to the directory where this repository is installed using ``cd`` commands. `Detailed Tutorial <https://www.lifewire.com/change-directories-in-command-prompt-5185508>`_.
 
@@ -90,14 +99,17 @@ Then, you can re-run the like to re-create the ``care`` conda environment with t
  conda env create -f environment_windows.yml
 
 
-4. Installing CUDA 12.9
+5. Installing CUDA 12.9
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+⚠️ **CAUTION**: CUDA, cuDNN, and TensorRT have complex version compatibility relationships. Use NVIDIA documentation of
+each to ensure compatibility before use.
 
 1.  `Visit CUDA Download Link <https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local>`_. **NOTE**: this is a direct link for the download of the **latest** CUDA on Windows 11 x86_64. Verify that it is indeed CUDA 12.9 and the correct operating system configuration for your machine.
 2. Double-click the installer when ready to install CUDA 12.9.
 3. Follow the instructions in the installer to get an express installation. This will take some time.
 
-5. Installing cuDNN 9.11.0
+6. Installing cuDNN 9.11.0
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. Download ZIP file for cuDNN v9.11.0 for CUDA 12.x from the `download page <https://developer.nvidia.com/cudnn-downloads?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local>`_. `Direct link to installer <https://developer.nvidia.com/cudnn-downloads?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local>`_.
@@ -105,10 +117,10 @@ Then, you can re-run the like to re-create the ``care`` conda environment with t
      * NOTE1: You will need to create an NVIDIA developer account for this if you don't already have one.
      * NOTE2: this is a direct link for the download of the **latest** cuDNN on Windows 11 x86_64. Verify that it is indeed cuDNN 9.11.0 and the correct operating system configuration for your machine.
 
-2. Unzip the zip file and copy ``bin``, ``lib``, and ``include`` folders to ``C:\Program Files\NVIDIA\CUDNN\v8.9.7``.
-3. Add ``C:\Program Files\NVIDIA\CUDNN\v8.9.7\bin`` to your PATH
+2. Unzip the zip file and copy ``bin``, ``lib``, and ``include`` folders to ``C:\Program Files\NVIDIA\CUDNN\v9.11.0``.
+3. Add ``C:\Program Files\NVIDIA\CUDNN\v9.11.0\bin\12.9`` to your PATH
 
-6. Installing TensorRT 10.11.0
+7. Installing TensorRT 10.11.0
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **NOTE:** As of July 2025, all GPUs with compute capability higher than 7.5 are supported by TensorRT 10.11, but this may change in the future.
