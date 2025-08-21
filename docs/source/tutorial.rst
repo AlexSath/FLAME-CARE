@@ -5,7 +5,7 @@ Video Tutorials
 How To Windows Install
 ^^^^^^^^^^^^^^^^^^^^^^
 .. image:: https://img.youtube.com/vi/AiBohFtv5Gc/maxresdefault.jpg
-    :alt: IMAGE ALT TEXT HERE
+    :alt: FLAME-CARE Tutorial - Windows Install
     :target: https://www.youtube.com/watch?v=AiBohFtv5Gc
 
 How To WSL Install
