@@ -83,7 +83,7 @@ You should now see ``(base)`` at the beginning of your prompt:
 ⚠️ Handling common problems during conda installation and initialization:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-a. `conda` is not recognized
+a. ``conda`` is not recognized
 --------
 
 This can arise in many different flavors based on your operating system, but will be some variation of:
