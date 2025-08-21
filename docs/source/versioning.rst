@@ -52,11 +52,11 @@ Hit ``Create`` and ensure that the ``NLOM-DATA/CARE_for_MATLAB/mlruns`` folder i
 
 Assuming that ``NLOM-DATA/CARE_for_MATLAB`` was mounted, and the following was selected in ``Sync Rules``:
 
-.. image:: ../../images/versioning/SynologyDrive_sync.png
+.. image:: ../images/versioning/SynologyDrive_sync.png
 
 Then the user would see the following in their file tree:
 
-.. image:: ../../images/versioning/SynologyDrive_mount.png
+.. image:: ../images/versioning/SynologyDrive_mount.png
 
 2. MLFlow
 ^^^^^^^^^
@@ -66,16 +66,90 @@ To download MLFlow, follow the instructions for setting up the ``care`` conda en
 a. Starting Tracking Server
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Run the following command:
+In your command-line interface, navigate to the folder where the ``flame-care`` repository is installed and the ``flame``
+module is accessible.
+
+With the ``care`` conda environment active, run the following command:
 
 ::
-    mlflow server --host 127.0.0.1 --port 5050 --serve-artifacts --backend-store-uri <path/to/CARE_for_MATLAB/mlruns> --default-artifact-root <path/to/CARE_for_MATLAB/mlruns> --artifacts-destination <path/to/CARE_for_MATLAB/mlruns>
+    python start_mlflow_server.py --ip 127.0.0.1 --port 5050 --tracking-direc </path/to/CARE_for_MATLAB/mlruns>
+
+⚠️ DO NOT USE ``mlflow server`` COMMAND-LINE API TO START MLFLOW TRACKING SERVERS
+-----------
+
+Using the ``mlflow server`` command-line API for Balu-Lab CARE purposes **risks permanent deletion** of all models in 
+the Synology Drive mlruns folder. This is because using the ``mlflow server`` API with local directories was not designed 
+for servers that can be mounted on multiple machines at different locations like Synology Drive. 
+
+Please use ``start_mlflow_server.py`` as indicated above instead, which has a few built-in workarounds to prevent
+this issue.
+
+⚠️ Server processes must be deleted
+-------------
+
+``start_mlflow_server.py`` lacks the capability of determining the Python subprocess that hosts the MLFlow server. Without
+killing the process in-between the creation of servers, the user could find themselves with many MLFlow servers being
+hosted at once.
+
+To prevent this, the server processes must be killed manually.
+
+* On Windows, open Task Manager and scroll past "Background Processes". Find Python processes and hit "End Task"
+
+* On WSL / Linux, type:
+
+::
+    ps -a
+
+Find the PID of the first python process after the mlflow process:
+
+.. image:: ../images/versioning/process.png
+
+Then, kill the process:
+
+::
+    kill <PID>
 
 
-
-b. Viewing Stored Models 
+b. Viewing Stored Models
 ~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once the tracking server has been started, it can be accessed through a web browser. Use the following as the web address:
+
+::
+    127.0.0.1:5050
+
+The MLFlow server GUI will appear:
+
+.. image:: ../images/versioning/mlflow_gui.png
+
 
 c. Model Registry
 ~~~~~~~~~~~~~~~~~
+
+The Model Registry is the **database within MLFlow that tracks models that are ready for deployment**. For a model to be
+used for inference by ``CARE_on_image.py``, it must exist within the model registry.
+
+Types of stored models:
+-------------
+
+* MLFlow **runs** are each model in their most raw format. These can be found in the GUI ``Experiments`` tab. Here, model
+  metaparameters are stored along with their artifacts. Artifacts are not stored here by default, but the server is set
+  up using ``start_mlflow_server.py``, they will appear under the ``Artifacts`` tab once a run is clicked on.
+  `Read more <https://mlflow.org/docs/latest/api_reference/python_api/mlflow.html#mlflow.start_run>`_.
+* MLFlow **registered models** are formalized models that are ready for deployment. Registered models are not duplicates
+  of model runs. Instead, registered models contain a dictionary mapping specific versions of the deployable model to
+  specific MLFlow Run IDs where the model can be found. `Read more <https://mlflow.org/docs/latest/ml/model-registry/>`_.
+
+Registering a model of interest:
+------------
+
+To register a model of interest, first click on it within the ``Experiments`` tab. An experiment run page looks like this:
+
+.. image:: ../images/versioning/mlflow_run_example.png
+
+Then, click the ``Register`` button, select the desired model registry from the dropdown, and hit ``Register`` in the popup.
+
+.. image:: ../images/versioning/mlflow_run_registration.png
+
+The MLFlow run will now be mapped under a version of the selected model registry in the ``Models`` tab!
 
