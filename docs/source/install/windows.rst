@@ -15,6 +15,7 @@ Download & Install any version on your Windows machine.
 No matter the method, to install the source code visit `the repository on GitHub <https://github.com/AlexSath/FLAME-CARE>`_.
 
 a. Clone Repository through GitHub CLI (Recommended)
+~~~~
 
 Git is a tool to manage different versions of code. GitHub is a website hosted by Microsoft where people upload
 their code to the cloud for editing and sharing. GitHub uses Git (the tool) to manage changes to the codebase
@@ -47,6 +48,7 @@ Once you've verified the git installation, you can clone the repository with one
 
 
 b. Download Repository ZIP File (Lacks Version Control)
+~~~~~
 
 Once visiting the repository page, download the zip as in this image:
 
@@ -82,6 +84,7 @@ You should now see ``(base)`` at the beginning of your prompt:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 a. `conda` is not recognized
+--------
 
 This can arise in many different flavors based on your operating system, but will be some variation of:
 
@@ -101,6 +104,7 @@ failed. Just in case, you can check `this answer <https://askubuntu.com/question
 on Stack Exchange.
 
 b. ``(base)`` not immediately seen after re-opening the shell
+---------
 
 Usually this can be explained by some shells (such as ``Command Prompt`` on Windows) not showing the ``(base)`` 
 environment when first opened. This is a simple fix, however:
@@ -131,6 +135,7 @@ This will install the following dependencies in the CARE environment:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 a. Pip package cannot be installed.
+---------
 
 **SOLUTION:** In ``environment_windows.yml``, change the package version of the package that cannot be installed.
 
@@ -221,6 +226,6 @@ e. Add ``TensorRT-10.11.0.33\bin`` to system PATH
 To verify proper TensorRT installation, restart your shell and run the ``trtexec`` command.
 
 ::
-     
+
      trtexec --h
 
