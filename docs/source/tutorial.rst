@@ -8,8 +8,6 @@ How To Windows Install
     :alt: IMAGE ALT TEXT HERE
     :target: https://www.youtube.com/watch?v=AiBohFtv5Gc
 
-
-
 How To WSL Install
 ^^^^^^^^^^^^^^^^^^
 `Video Link <_blank>`_
