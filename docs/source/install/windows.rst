@@ -9,48 +9,48 @@ Visit MATLAB downloads on downloads site. `Link <https://www.mathworks.com/downl
 
 Download & Install any version on your Windows machine.
 
-1. Download Source Code
+2. Download Source Code
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 No matter the method, to install the source code visit `the repository on GitHub <https://github.com/AlexSath/FLAME-CARE>`_.
 
-     a. Clone Repository through GitHub CLI (Recommended)
+a. Clone Repository through GitHub CLI (Recommended)
 
-     Git is a tool to manage different versions of code. GitHub is a website hosted by Microsoft where people upload
-     their code to the cloud for editing and sharing. GitHub uses Git (the tool) to manage changes to the codebase
-     of projects it hosts.
+Git is a tool to manage different versions of code. GitHub is a website hosted by Microsoft where people upload
+their code to the cloud for editing and sharing. GitHub uses Git (the tool) to manage changes to the codebase
+of projects it hosts.
 
-     To interface with Git, the tool must be downloaded to your computer. We recommend doing this when using FLAME-CARE
-     because it allows you to use your CLI to update the code from the cloud repository (as opposed
-     to re-downloading it every time there is an update). To get started, be sure to install some version of the git
-     CLI. `This tutorial is helpful <https://github.com/git-guides/install-git>`_.
+To interface with Git, the tool must be downloaded to your computer. We recommend doing this when using FLAME-CARE
+because it allows you to use your CLI to update the code from the cloud repository (as opposed
+to re-downloading it every time there is an update). To get started, be sure to install some version of the git
+CLI. `This tutorial is helpful <https://github.com/git-guides/install-git>`_.
 
-     Once it's downloaded, you can verify that it's installed using this command:
+Once it's downloaded, you can verify that it's installed using this command:
 
-     ::
-          git version
+::
+     git version
 
-     Once you've verified the git installation, you can clone the repository with one of these commands:
+Once you've verified the git installation, you can clone the repository with one of these commands:
 
-     ::
-          git clone git@github.com:AlexSath/FLAME-CARE.git
+::
+     git clone git@github.com:AlexSath/FLAME-CARE.git
 
-     ::
-          git clone https://github.com/AlexSath/FLAME-CARE.git
+::
+     git clone https://github.com/AlexSath/FLAME-CARE.git
 
-     ::
-          gh repo clone AlexSath/FLAME-CARE
-
-
-     b. Download Repository ZIP File (Lacks Version Control)
-
-     Once visiting the repository page, download the zip as in this image:
-
-     .. image:: ../../images/install/git_zip_download.png
+::
+     gh repo clone AlexSath/FLAME-CARE
 
 
+b. Download Repository ZIP File (Lacks Version Control)
 
-1. Install Conda
+Once visiting the repository page, download the zip as in this image:
+
+.. image:: ../../images/install/git_zip_download.png
+
+
+
+3. Install Conda
 ^^^^^^^^^^^^^^^^
 
 Visit the `Anaconda website <https://www.anaconda.com/download/success>`_ and download the latest Windows Miniconda 
@@ -76,7 +76,7 @@ You should now see ``(base)`` at the beginning of your prompt:
 ⚠️ Handling common problems during conda installation and initialization:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-     1. `conda` is not recognized
+a. `conda` is not recognized
 
 This can arise in many different flavors based on your operating system, but will be some variation of:
 
@@ -94,7 +94,7 @@ If you're curious where the condabin ``condabin`` can be, usually by default it 
 failed. Just in case, you can check `this answer <https://askubuntu.com/questions/849470/how-do-i-activate-a-conda-environment-in-my-bashrc>`_ 
 on Stack Exchange.
 
-     2. ``(base)`` not immediately seen after re-opening the shell
+b. ``(base)`` not immediately seen after re-opening the shell
 
 Usually this can be explained by some shells (such as ``Command Prompt`` on Windows) not showing the ``(base)`` 
 environment when first opened. This is a simple fix, however:
@@ -122,7 +122,7 @@ This will install the following dependencies in the CARE environment:
 ⚠️ Handling common problems during CARE environment initialization:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    1. Pip package cannot be installed.
+a. Pip package cannot be installed.
 
 **SOLUTION:** In ``environment_windows.yml``, change the package version of the package that cannot be installed.
 
@@ -149,16 +149,16 @@ Then, you can re-run the like to re-create the ``care`` conda environment with t
      conda env create -f environment_windows.yml
 
 
-1. Installing CUDA 12.9
+5. Installing CUDA 12.9
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 ⚠️ **CAUTION**: CUDA, cuDNN, and TensorRT have complex version compatibility relationships. The version combination used
 here (CUDA 12.9 + cuDNN 9.11.0 + TensorRT 10.11.0), has been tested, and is therefore recommended. If thinking of using other
 combinations, use NVIDIA documentation to ensure compatibility before use.
 
-   1.  `Visit CUDA Download Link <https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local>`_. **NOTE**: this is a direct link for the download of the **latest** CUDA on Windows 11 x86_64. Verify that it is indeed CUDA 12.9 and the correct operating system configuration for your machine.
-   2. Double-click the installer when ready to install CUDA 12.9.
-   3. Follow the instructions in the installer to get `an express installation. This can take up to 10-20 minutes.
+a.  `Visit CUDA Download Link <https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local>`_. **NOTE**: this is a direct link for the download of the **latest** CUDA on Windows 11 x86_64. Verify that it is indeed CUDA 12.9 and the correct operating system configuration for your machine.
+b. Double-click the installer when ready to install CUDA 12.9.
+c. Follow the instructions in the installer to get `an express installation. This can take up to 10-20 minutes.
 
 To verify CUDA installation, re-open your shell and enter the command:
 
@@ -184,14 +184,14 @@ by default.
 6. Installing cuDNN 9.11.0
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-   1. Download ZIP file for cuDNN v9.11.0 for CUDA 12.x from the `download page <https://developer.nvidia.com/cudnn-downloads?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local>`_. `Direct link to installer <https://developer.nvidia.com/cudnn-downloads?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local>`_.
+a. Download ZIP file for cuDNN v9.11.0 for CUDA 12.x from the `download page <https://developer.nvidia.com/cudnn-downloads?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local>`_. `Direct link to installer <https://developer.nvidia.com/cudnn-downloads?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local>`_.
 
-     * NOTE1: You will need to create an NVIDIA developer account for this if you don't already have one.
-     * NOTE2: this is a direct link for the download of the **latest** cuDNN on Windows 11 x86_64. Verify that it 
-     is indeed cuDNN 9.11.0 and the correct operating system configuration for your machine.
+  * NOTE1: You will need to create an NVIDIA developer account for this if you don't already have one.
+  * NOTE2: this is a direct link for the download of the **latest** cuDNN on Windows 11 x86_64. Verify that it 
+  is indeed cuDNN 9.11.0 and the correct operating system configuration for your machine.
 
-   2. Visit Program Files in your File Explorer, and verify that cuDNN was installed: ``C:\Program Files\NVIDIA\CUDNN\v9.11.0``.
-   3. Add ``C:\Program Files\NVIDIA\CUDNN\v9.11.0\bin\12.9`` to your PATH
+b. Visit Program Files in your File Explorer, and verify that cuDNN was installed: ``C:\Program Files\NVIDIA\CUDNN\v9.11.0``.
+c. Add ``C:\Program Files\NVIDIA\CUDNN\v9.11.0\bin\12.9`` to your PATH
 
 7. Installing TensorRT 10.11.0
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -199,11 +199,11 @@ by default.
 **NOTE:** As of July 2025, all GPUs with compute capability higher than 7.5 are supported by TensorRT 10.11, but this may 
 change in the future.
 
-   1. Dowload ZIP file: `Download Link <https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/10.11.0/zip/TensorRT-10.11.0.33.Windows.win10.cuda-12.9.zip>`_
-   2. Unpack ZIP
-   3. Copy ``TensorRT-10.11.0.33`` to ``C:\Program Files``
-   4. Add ``TensorRT-10.11.0.33\lib`` to system PATH
-   5. Add ``TensorRT-10.11.0.33\bin`` to system PATH
+a. Dowload ZIP file: `Download Link <https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/10.11.0/zip/TensorRT-10.11.0.33.Windows.win10.cuda-12.9.zip>`_
+b. Unpack ZIP
+c. Copy ``TensorRT-10.11.0.33`` to ``C:\Program Files``
+d. Add ``TensorRT-10.11.0.33\lib`` to system PATH
+e. Add ``TensorRT-10.11.0.33\bin`` to system PATH
 
 To verify proper TensorRT installation, restart your shell and run the ``trtexec`` command.
 
