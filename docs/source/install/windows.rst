@@ -28,17 +28,21 @@ CLI. `This tutorial is helpful <https://github.com/git-guides/install-git>`_.
 Once it's downloaded, you can verify that it's installed using this command:
 
 ::
+
      git version
 
 Once you've verified the git installation, you can clone the repository with one of these commands:
 
 ::
+
      git clone git@github.com:AlexSath/FLAME-CARE.git
 
 ::
+
      git clone https://github.com/AlexSath/FLAME-CARE.git
 
 ::
+
      gh repo clone AlexSath/FLAME-CARE
 
 
@@ -64,6 +68,7 @@ like this:
 Type the following command:
 
 ::
+
      conda init
 
 
@@ -81,6 +86,7 @@ a. `conda` is not recognized
 This can arise in many different flavors based on your operating system, but will be some variation of:
 
 ::
+
      'conda' is not recognized as internal or external command
 
 
@@ -100,6 +106,7 @@ Usually this can be explained by some shells (such as ``Command Prompt`` on Wind
 environment when first opened. This is a simple fix, however:
 
 ::
+
      conda activate base
 
 4. Create CARE Environment
@@ -111,6 +118,7 @@ With a conda-initialized shell, navigate to the directory where this repository 
 Once navigated to the repository directory, create an environment for your Python CARE:
 
 ::
+
      conda env create -f environment_windows.yml
 
 
@@ -127,6 +135,7 @@ a. Pip package cannot be installed.
 **SOLUTION:** In ``environment_windows.yml``, change the package version of the package that cannot be installed.
 
 ::
+
    - <package_name>==x.x.x
 
 
@@ -134,18 +143,21 @@ a. Pip package cannot be installed.
 could become
 
 ::
+
    - <package_name>==y.y.y
 
 **IF YOU CHANGE THE ENVIRONMENT YAML:** Usually, you will have to remove the previous installation of the CARE 
 package and then reinstall it with the changed ``environment_windows.yml``. To do this, you can run:
 
 ::
+
      conda env remove --name care --all
 
 
 Then, you can re-run the like to re-create the ``care`` conda environment with the updated ``environment_windows.yml``:
 
 ::
+
      conda env create -f environment_windows.yml
 
 
@@ -163,6 +175,7 @@ c. Follow the instructions in the installer to get `an express installation. Thi
 To verify CUDA installation, re-open your shell and enter the command:
 
 ::
+
      nvcc --version
 
 You would see something like the following:
@@ -208,5 +221,6 @@ e. Add ``TensorRT-10.11.0.33\bin`` to system PATH
 To verify proper TensorRT installation, restart your shell and run the ``trtexec`` command.
 
 ::
+     
      trtexec --h
 
