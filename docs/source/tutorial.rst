@@ -4,7 +4,11 @@ Video Tutorials
 
 How To Windows Install
 ^^^^^^^^^^^^^^^^^^^^^^
-`Video Link <_blank>`_
+.. image:: https://img.youtube.com/vi/AiBohFtv5Gc/maxresdefault.jpg
+    :alt: IMAGE ALT TEXT HERE
+    :target: https://www.youtube.com/watch?v=AiBohFtv5Gc
+
+
 
 How To WSL Install
 ^^^^^^^^^^^^^^^^^^
