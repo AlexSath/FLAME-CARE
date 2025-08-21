@@ -13,7 +13,7 @@ taken using a Fast, Large-Area Multiphoton Exoscope (FLAME).
 
     self
     about
-    version
+    versioning
     install/index
     training/index
     inference/index
