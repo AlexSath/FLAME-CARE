@@ -72,6 +72,7 @@ module is accessible.
 With the ``care`` conda environment active, run the following command:
 
 ::
+
     python start_mlflow_server.py --ip 127.0.0.1 --port 5050 --tracking-direc </path/to/CARE_for_MATLAB/mlruns>
 
 ⚠️ DO NOT USE ``mlflow server`` COMMAND-LINE API TO START MLFLOW TRACKING SERVERS
@@ -98,6 +99,7 @@ To prevent this, the server processes must be killed manually.
 * On WSL / Linux, type:
 
 ::
+
     ps -a
 
 Find the PID of the first python process after the mlflow process:
@@ -107,6 +109,7 @@ Find the PID of the first python process after the mlflow process:
 Then, kill the process:
 
 ::
+
     kill <PID>
 
 
@@ -116,6 +119,7 @@ b. Viewing Stored Models
 Once the tracking server has been started, it can be accessed through a web browser. Use the following as the web address:
 
 ::
+    
     127.0.0.1:5050
 
 The MLFlow server GUI will appear:
