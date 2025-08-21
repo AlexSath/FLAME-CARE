@@ -97,11 +97,11 @@ This is because while the conda installation may have been successful, the insta
 to your system path. Resolving this is different on different operating systems:
 
 * **Windows**: `Adding conda to system environment variables <https://www.geeksforgeeks.org/python/how-to-setup-anaconda-path-to-environment-variable/>`_. 
-If you're curious where the condabin ``condabin`` can be, usually by default it is at ``C:\Users\<username>\miniconda3\condabin``.
+  If you're curious where the condabin ``condabin`` can be, usually by default it is at ``C:\Users\<username>\miniconda3\condabin``.
 
 * **Linux/MacOS**: Usually miniconda installs itself in your path by default. If it didn't, that usually means the install 
-failed. Just in case, you can check `this answer <https://askubuntu.com/questions/849470/how-do-i-activate-a-conda-environment-in-my-bashrc>`_ 
-on Stack Exchange.
+  failed. Just in case, you can check `this answer <https://askubuntu.com/questions/849470/how-do-i-activate-a-conda-environment-in-my-bashrc>`_ 
+  on Stack Exchange.
 
 b. ``(base)`` not immediately seen after re-opening the shell
 ---------
@@ -113,7 +113,7 @@ environment when first opened. This is a simple fix, however:
 
      conda activate base
 
-4. Create CARE Environment
+1. Create CARE Environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 With a conda-initialized shell, navigate to the directory where this repository is installed using ``cd`` commands. 
@@ -206,7 +206,7 @@ a. Download ZIP file for cuDNN v9.11.0 for CUDA 12.x from the `download page <ht
 
   * NOTE1: You will need to create an NVIDIA developer account for this if you don't already have one.
   * NOTE2: this is a direct link for the download of the **latest** cuDNN on Windows 11 x86_64. Verify that it 
-  is indeed cuDNN 9.11.0 and the correct operating system configuration for your machine.
+    is indeed cuDNN 9.11.0 and the correct operating system configuration for your machine.
 
 b. Visit Program Files in your File Explorer, and verify that cuDNN was installed: ``C:\Program Files\NVIDIA\CUDNN\v9.11.0``.
 c. Add ``C:\Program Files\NVIDIA\CUDNN\v9.11.0\bin\12.9`` to your PATH
