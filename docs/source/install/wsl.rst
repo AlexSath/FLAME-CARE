@@ -2,7 +2,7 @@
 WSL (Training & CLI Inference)
 ==============================
 
-WSL stands for **W**indows **S**ubsystem for **L**inux. It is required for training because training is performed through
+WSL stands for Windows Subsystem for Linux. It is required for training because training is performed through
 the TensorFlow package. TensorFlow can only interface with the GPU on a Windows computer using the WSL virtual machine 
 as an interface (as of Aug 2025). Thus, Python packages and dependencies must be installed on WSL for training.
 
@@ -69,7 +69,7 @@ simply use the "Mount" path found at ``/mnt``. Example:
 .. image:: ../../images/install/wsl/mount.png
     :alt: Image showing the wsl /mnt path
 
-``cd`` (**C**hange **D**irectory) and ``ls`` (List Files) can then be used to navigate to the folder where the source
+``cd`` (Change Directory) and ``ls`` (List Files) can then be used to navigate to the folder where the source
 code was installed. Once the source directory is reached, files matching the GitHub repository should be seen:
 
 .. image:: ../../images/install/wsl/success_files.png
