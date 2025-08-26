@@ -155,8 +155,8 @@ button and wait until it switches to ``uninstall`` (indicating a successful inst
 .. image:: ../../images/install/wsl/vscode_wsl.png
 
 Repeat for the following extensions:
-* Python
-* Jupyter
+ * Python
+ * Jupyter
 
 c. Open VSCode in WSL
 ~~~~~~
@@ -166,7 +166,7 @@ Finally, in your WSL shell, re-navigate to the directory with FLAME-CARE code (s
 Then, open VSCode through the CLI:
 
 ::
-    
+
     code .
 
 This should open a new Window of VSCode that is connected to WSL:
