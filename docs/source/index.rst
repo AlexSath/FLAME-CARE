@@ -19,3 +19,4 @@ taken using a Fast, Large-Area Multiphoton Exoscope (FLAME).
     inference/index
     tutorial
     api
+    notes
