@@ -16,7 +16,7 @@ of timeseries data.
 .. image:: ../images/possible_inputs.png
     :alt: A diagram of the possible image dimensions used for FLAME.
 
-This does disqualify the default CSBDeep by itself, as different models can be trained to handle each input individually,
+This does not disqualify the default CSBDeep by itself, as different models can be trained to handle each input individually,
 or channel dimensions can be removed through matrix reshaping operations.
 
 That being said, the custom ``FLAMEImage`` and ``CAREInferenceSession`` classes implemented by the FLAME-CARE source code
