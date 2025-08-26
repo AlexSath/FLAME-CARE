@@ -24,11 +24,13 @@ b. Install
 List possible WSL distributions and verify that ``Ubuntu-24.04`` is present:
 
 ::
+
     wsl --list --online
 
 Next, install the desired distribution:
 
 ::
+
     wsl --install Ubuntu-24.04
 
 c. Open WSL
@@ -84,16 +86,19 @@ a. Download miniconda
 Visit your home directory:
 
 ::
+
     cd ~
 
 Then, download the installer script:
 
 ::
+
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 
 Finally, run the script:
 
 ::
+
     bash ~/Miniconda3-latest-Linux-x86_64.sh
 
 Finally, restart your shell.
@@ -115,11 +120,13 @@ Visit the folder where the ``FLAME-CARE`` files can be found. Revisit Step 2b fo
 Within that folder, install the conda environment (this will take 10-15 minutes):
 
 ::
+
     conda env create -f ./environment_wsl.yml
 
 Once finished, activate the conda environment:
 
 ::
+
     conda activate care
 
 Resulting in the ``(care)`` prefix in your shell.
@@ -159,6 +166,7 @@ Finally, in your WSL shell, re-navigate to the directory with FLAME-CARE code (s
 Then, open VSCode through the CLI:
 
 ::
+    
     code .
 
 This should open a new Window of VSCode that is connected to WSL:
