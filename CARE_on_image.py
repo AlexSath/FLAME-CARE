@@ -97,7 +97,7 @@ def main():
     print(f"Python system logs can be found at {LOG_DIREC}")
     # LOGGER.info(f"Matlab engine version: {matlab_engine._supported_versions}.")
     parser = argparse.ArgumentParser(
-        prog="CARE_on_data.py",
+        prog="CARE_on_image.py",
         description= "Use CARE (content-aware image restoration) to denoise data." \
             + " Data can be a single tiff or a folder of tiffs." \
             + " Uses MLFlow (v. 2-22-2) Registered Models to track and retrieve models."

@@ -7,7 +7,7 @@ Help Menu
 
 ::
 
-  usage: CARE_on_data.py [-h] [--matlab] [--matlab_pid MATLAB_PID] --data-path DATA_PATH [--overwrite]
+  usage: CARE_on_image.py [-h] [--matlab] [--matlab_pid MATLAB_PID] --data-path DATA_PATH [--overwrite]
                         --model-name {CARE-1Channel} [--model-version MODEL_VERSION]
                         --mlflow-tracking-direc MLFLOW_TRACKING_DIREC
                         [--mlflow-tracking-ip MLFLOW_TRACKING_IP]
@@ -59,12 +59,12 @@ Examples
 
 ::
 
-  python CARE_on_data.py --data-path path/to/data/directory --model-name CARE-1Channel --mlflow-tracking-direc path/to/tracking/directory
+  python CARE_on_image.py --data-path path/to/data/directory --model-name CARE-1Channel --mlflow-tracking-direc path/to/tracking/directory
 
 2. Inferring on a single image using a specific version of ``CARE-1Channel`` model registered in an MLFlow tracking server hosted on a specified ip and port.
 
 ::
-  
-  python CARE_on_data.py --data-path path/to/image.tiff --model-name CARE-1Channel --model-version 2 --mlflow-tracking-direc path/to/tracking/directory --mlflow-tracking-ip 146.12.67.1 --mlflow-tracking-port 6700
+
+  python CARE_on_image.py --data-path path/to/image.tiff --model-name CARE-1Channel --model-version 2 --mlflow-tracking-direc path/to/tracking/directory --mlflow-tracking-ip 146.12.67.1 --mlflow-tracking-port 6700
 
 
