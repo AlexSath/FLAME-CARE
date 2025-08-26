@@ -12,6 +12,9 @@ platform for CARE model training and deployment. To understand the underlying te
 `FLAME <www.nature.com/articles/s41598-020-75172-9>`_ and `CARE <https://www.nature.com/articles/s41592-018-0216-7>`_ 
 publications.
 
+.. image:: ../images/flame_example.png
+    :alt: Example of denoised FLAME image made possible by CARE.
+
 .. toctree::
     :hidden:
     :maxdepth: 2
