@@ -65,7 +65,7 @@ installer. `Direct Link <https://repo.anaconda.com/miniconda/Miniconda3-latest-W
 Once installed using the downloaded ``.exe``, open a Powershell instance of command-prompt. It should look something 
 like this:
 
-.. image:: ../../images/install/powershell_default.png
+.. image:: ../../images/install/windows/powershell_default.png
 
 Type the following command:
 
@@ -77,7 +77,7 @@ Type the following command:
 After hitting enter and allowing the command to run its course, close and re-open the command-prompt. 
 You should now see ``(base)`` at the beginning of your prompt:
 
-.. image:: ../../images/install/powershell_base.png
+.. image:: ../../images/install/windows/powershell_base.png
      :align: center
 
 ⚠️ Handling common problems during conda installation and initialization:
