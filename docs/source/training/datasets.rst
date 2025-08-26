@@ -16,10 +16,20 @@ This process is governed by ``create_care_dataset.ipynb``, which serves many fun
     unique image id in ``raw_image_index.csv``, it is provided one. Then, all available image indexes are combined 
     and associated with a dataset with a unique name and ID. Information is stored in ``<dataset_name>.json`` found 
     in the ``datasets`` directory in the FLAME-CARE source code.
+
+        ./datasets/<date>_<n_images>I_<model_type>_<input_frames>to<GT_frames>.json
+        
+        ./datasets/<date>_<n_images>I_<model_type>_<input_frames>to<GT_frames>.png
+
  b. Screening all available ``.tif`` files to verify they have a sufficient number of FLAME frames (pixel dwell frames)
     for training the desired denoising model.
  c. Pre-processing available ``.tif`` files by summing the desired number of frames for CARE denoising and saving
     the processed images in ``train`` and ``test`` datasets.
+
+        /.../destination_directory/train/image28_frames5.tif
+
+        /.../destination_directory/train/image28_frames40.tif
+
  d. Pixel dataset statistics are aggregated. This becomes important for image normalization in the second step of
     dataset pre-processing. In image analysis, it is generally believed that images should be normalized according to
     mean pixel values across all possible images in the distribution as opposed to all pixels in the singular image of
@@ -31,6 +41,12 @@ This process is governed by ``create_care_dataset.ipynb``, which serves many fun
 of channels. In other words, it assumes that all images are either RGB, or CMYK, or Grayscale. If images with a different
 number of channels are used, the code will return an error. This is registered as `issue #6 <https://github.com/AlexSath/FLAME-CARE/issues/6>`_ 
 in the FLAME-CARE repository.
+
+⚠️ If images in the dataset have different X-Y dimensions (such as when bidirectional scanning correction is found in 
+``.tileData.txt``), every image will be framed in an X-Y array of dimensions equal to the largest image X and image Ys 
+found in the dataset. This is common when some images in the dataset have had a ``bidirectionalCorrection`` applied.
+See the "API Notes" and the ``FLAMEImage`` class for more information about this correction.
+
 
 Some key parameters to understand for ``create_care_dataset.ipynb`` (found in the first code cell):
  * ``INPUT_DIREC``: This is the directory where ``.tif`` images will be searched for. Image uniqueness will be assessed
@@ -55,7 +71,7 @@ Some key parameters to understand for ``create_care_dataset.ipynb`` (found in th
    what number of frames may be appropriate.
 
 
-2. ``care_data_configuration.ipynb`` (Readying Dataset for Training)
+1. ``care_data_configuration.ipynb`` (Readying Dataset for Training)
 ^^^^^^^^^^^^^^^^
 
 As the last step of the data pre-processing pipeline for model training, ``care_data_configuration.ipynb`` does the
@@ -78,7 +94,7 @@ Key parameters for this notebook (found in the first code cell):
  * ``PATCH_MULTIPLE``: A scalar multiple to increase the numbe of patches extracted.
  * ``BACKGROUND_PATCH_THRESHOLD``: Briefly, this is a parameter used by the ``csbdeep`` package (default CARE package) that
    determines the amount of background signal acceptable within an extracted patch. This prevents the extraction of patches
-   that don't have much signal.
+   that don't have much signal. Read more in CSBDeep's `own documentation <csbdeep.bioimagecomputing.com/doc/datagen.html#csbdeep.data.no_background_patches>`_.
  * ``CHANNELS_ONE_BY_ONE``: Whether to remove the channel dimension from extracted patches. For all models intended for
    deployment, this should be ``True`` (see 2c. above). 
 
@@ -87,7 +103,7 @@ This notebook will result in an NPZ with the following naming scheme:
     <dataset_name>_patch<patch_size>_<number_patches_per_image>PpI_<number_channels_per_patch>Chan.npz
 
 
-3. Denoising Appendix
+1. Denoising Appendix
 ^^^^^^^^^
 
 The only way to definitively determine the appropriate number of input and output number of frames for CARE denoising
