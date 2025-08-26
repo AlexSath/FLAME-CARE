@@ -43,4 +43,4 @@ FLAME-CARE has custom tooling for dataset management and utilizes both SynologyD
 tracking, thereby enabling researchers to track model metrics and have confidence that they are using the best available 
 CARE model for their FLAME image denoising.
 
-See "Version Control" for more information.
+See `Version Control <./versioning>`_ for more information.
