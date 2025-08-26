@@ -40,10 +40,10 @@ Close and re-open the PowerShell prompt. Then, open WSL according to the image b
     :alt: Image showing dropdown to open a new shell in PowerShell with Ubuntu-24.04 boxed.
 
 
-2. Install Python Dependencies
+2. Downloading Source Code
 ^^^^^^^^^^^^^^
 
-a. Download Source Code
+a. Visit GitHub
 ~~~~~~~~~~~
 
 Either using GitHub CLI or the GitHub ZIP downloader, download the source code from 
@@ -70,4 +70,97 @@ simply use the "Mount" path found at ``/mnt``. Example:
     :alt: Image showing the wsl /mnt path
 
 ``cd`` (**C**hange **D**irectory) and ``ls`` (List Files) can then be used to navigate to the folder where the source
-code was installed. 
+code was installed. Once the source directory is reached, files matching the GitHub repository should be seen:
+
+.. image:: ../../images/install/wsl/success_files.png
+    :alt: List of files that should be found after source code download.
+
+3. Create CARE Conda environment
+^^^^^^^^^^^^^^
+
+a. Download miniconda
+~~~~~~~~~~~
+
+Visit your home directory:
+
+::
+    cd ~
+
+Then, download the installer script:
+
+::
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+
+Finally, run the script:
+
+::
+    bash ~/Miniconda3-latest-Linux-x86_64.sh
+
+Finally, restart your shell.
+
+⚠️ Conda will ask you a variety of questions during the installation. Defualts are fine, but **be sure to selected "yes"
+when prompted whether miniconda should alter your shell configuration**. This will make initialization easier in
+subsequent steps.
+
+You should see ``(base)`` in your shell after restarting:
+
+.. image:: ../../images/install/windows/powershell_base.png
+    :alt: Image of a shell with the '(base)' clearly delineating a successful conda installation.
+
+b. Populate the CARE enviornment
+~~~~~~~~~~~~
+
+Visit the folder where the ``FLAME-CARE`` files can be found. Revisit Step 2b for more information.
+
+Within that folder, install the conda environment (this will take 10-15 minutes):
+
+::
+    conda env create -f ./environment_wsl.yml
+
+Once finished, activate the conda environment:
+
+::
+    conda activate care
+
+Resulting in the ``(care)`` prefix in your shell.
+
+4. VSCode (For Jupyter-based Training)
+^^^^^^^^^^^
+
+a. Download VSCode
+~~~~~~~~~~
+
+On your Windows web browser, download VSCode from the `website <https://code.visualstudio.com/download>`_.
+
+Once installed, open the application.
+
+b. Add the WSL extention
+~~~~~~~~~~~
+
+In the VSCode settings, hit extensions:
+
+.. image:: ../../images/install/wsl/vscode_extensions.png
+    :alt: Image showing the extensions button in the VSCode settings.
+
+Once on the extensions screen, type ``wsl`` in the search bar and click on the WSL extension. Hit the blue ``install``
+button and wait until it switches to ``uninstall`` (indicating a successful install):
+
+.. image:: ../../images/install/wsl/vscode_wsl.png
+
+Repeat for the following extensions:
+* Python
+* Jupyter
+
+c. Open VSCode in WSL
+~~~~~~
+
+Finally, in your WSL shell, re-navigate to the directory with FLAME-CARE code (see step 2b).
+
+Then, open VSCode through the CLI:
+
+::
+    code .
+
+This should open a new Window of VSCode that is connected to WSL:
+
+.. image:: ../../images/install/wsl/vscode_wsl_verification.png
