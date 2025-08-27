@@ -71,32 +71,32 @@ Some key parameters to understand for ``create_care_dataset.ipynb`` (found in th
    what number of frames may be appropriate.
 
 
-1. ``care_data_configuration.ipynb`` (Readying Dataset for Training)
+2. ``care_data_configuration.ipynb`` (Readying Dataset for Training)
 ^^^^^^^^^^^^^^^^
 
 As the last step of the data pre-processing pipeline for model training, ``care_data_configuration.ipynb`` does the
 following:
- a. All images are min-max normalized according to a pixel distribution. As recommended by the original CARE paper,
+  a. All images are min-max normalized according to a pixel distribution. As recommended by the original CARE paper,
     1-99 percentile normalization is used.
- b. After normalization, images are split into patches.
- c. The channel dimension is then removed. This is because we (the Balu Lab) made a decision to feed image data
+  b. After normalization, images are split into patches.
+  c. The channel dimension is then removed. This is because we (the Balu Lab) made a decision to feed image data
     one channel at a time into the CARE model. Visit the homepage or talk to Alex Vallmitjana for more information.
- d. Finally, the training data is saved as an ``.npz`` (multi-dimensional numpy data structure) along with a corresponding
+  d. Finally, the training data is saved as an ``.npz`` (multi-dimensional numpy data structure) along with a corresponding
     JSON containing pre-processing metadata.
- e. Save image containing example input and ground truth patches for model training.
+  e. Save image containing example input and ground truth patches for model training.
 
 Key parameters for this notebook (found in the first code cell):
- * ``DATASET_NAME``: Indicates which dataset should be further processed
- * ``DATASET_DIREC``: Path to the ``datasets`` directory containing ``raw_image_index.csv`` and the dataset JSON file.
- * ``INPUT_DATA_DIREC``: Path to the directory containing this dataset's ``train`` and ``test`` subsets. Should be 
+   * ``DATASET_NAME``: Indicates which dataset should be further processed
+   * ``DATASET_DIREC``: Path to the ``datasets`` directory containing ``raw_image_index.csv`` and the dataset JSON file.
+   * ``INPUT_DATA_DIREC``: Path to the directory containing this dataset's ``train`` and ``test`` subsets. Should be 
    found inside the same directory as ``OUTPUT_DIREC`` in the previous Jupyter Notebook.
- * ``PATCH_SIZE``: The dimension of the square patches to be extracted from the image.
- * ``PATCH_MULTIPLE``: A scalar multiple to increase the numbe of patches extracted.
- * ``BACKGROUND_PATCH_THRESHOLD``: Briefly, this is a parameter used by the ``csbdeep`` package (default CARE package) that
+   * ``PATCH_SIZE``: The dimension of the square patches to be extracted from the image.
+   * ``PATCH_MULTIPLE``: A scalar multiple to increase the numbe of patches extracted.
+   * ``BACKGROUND_PATCH_THRESHOLD``: Briefly, this is a parameter used by the ``csbdeep`` package (default CARE package) that
    determines the amount of background signal acceptable within an extracted patch. This prevents the extraction of patches
    that don't have much signal. Read more in CSBDeep's `own documentation <csbdeep.bioimagecomputing.com/doc/datagen.html#csbdeep.data.no_background_patches>`_.
- * ``CHANNELS_ONE_BY_ONE``: Whether to remove the channel dimension from extracted patches. For all models intended for
-   deployment, this should be ``True`` (see 2c. above). 
+   * ``CHANNELS_ONE_BY_ONE``: Whether to remove the channel dimension from extracted patches. For all models intended for
+     deployment, this should be ``True`` (see 2c. above). 
 
 This notebook will result in an NPZ with the following naming scheme:
 
@@ -110,13 +110,13 @@ The only way to definitively determine the appropriate number of input and outpu
 is to do so empirically. However, any ML Denoising Investigator should consider the following when making a decision 
 regarding the number of frames to include in input and ground-truth:
 
- * Input number of frames determines the acquisition time required for your denoising model, and therefore dictates
+   * Input number of frames determines the acquisition time required for your denoising model, and therefore dictates
    the magnitude of acquisition speed increase provided by CARE processing.
- * The delta between the input and output number of frames determines the scale of the SNR gap the trained model is
+   * The delta between the input and output number of frames determines the scale of the SNR gap the trained model is
    being asked to recreate. The higher the SNR gap, the more information the trained model has to "invent" during
    inference and the higher the chance for hallucination. `This blog <https://blog.yanlincs.com/ml-tech/one-step-diffusion-models>`_
    may be useful for more information.
- * If a high delta between the input and output number of frames is required, an enterprizing ML scientist may seek
+   * If a high delta between the input and output number of frames is required, an enterprizing ML scientist may seek
    to split the SNR gap into multiple steps, thereby performing gradual, step-wise denoising. This is a great idea, and
    it is the basis for `Stable Diffusion Models <https://blog.segmind.com/beginners-guide-to-stable-diffusion-steps-parameter/>`_.
    Many-step denoising is not currently supported by this codebase, however.
