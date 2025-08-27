@@ -14,6 +14,7 @@ publications.
 
 .. image:: ../images/flame_example.png
     :alt: Example of denoised FLAME image made possible by CARE.
+    :width: 300
 
 .. toctree::
     :hidden:
