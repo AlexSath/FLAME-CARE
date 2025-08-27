@@ -7,6 +7,7 @@ How To Windows Install
 .. image:: https://img.youtube.com/vi/AiBohFtv5Gc/maxresdefault.jpg
     :alt: FLAME-CARE Tutorial - Windows Install
     :target: https://www.youtube.com/watch?v=AiBohFtv5Gc
+    :width: 300
 
 How To WSL Install
 ^^^^^^^^^^^^^^^^^^
@@ -17,10 +18,14 @@ How To Dataset Management
 .. image:: https://img.youtube.com/vi/ohssl_9ow2I/maxresdefault.jpg
     :alt: FLAME-CARE Tutorial - Dataset Management
     :target: https://www.youtube.com/watch?v=ohssl_9ow2I
+    :width: 300
 
 How To Training
 ^^^^^^^^^^^^^^^
-`Video Link <_blank>`_
+.. image:: https://img.youtube.com/vi/lBp3NP9mihk/maxresdefault.jpg
+    :alt: FLAME-cARE Tutorial - Training
+    :target: https://www.youtube.com/watch?v=lBp3NP9mihk
+    :width: 300
 
 How To Model Version Control
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
