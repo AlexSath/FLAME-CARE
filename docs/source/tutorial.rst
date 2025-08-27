@@ -14,7 +14,9 @@ How To WSL Install
 
 How To Dataset Management
 ^^^^^^^^^^^^^^^^^^^^^^^^^
-`Video Link <_blank>`_
+.. image:: https://img.youtube.com/vi/ohssl_9ow2I/maxresdefault.jpg
+    :alt: FLAME-CARE Tutorial - Dataset Management
+    :target: https://www.youtube.com/watch?v=ohssl_9ow2I
 
 How To Training
 ^^^^^^^^^^^^^^^
