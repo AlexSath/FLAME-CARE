@@ -31,7 +31,7 @@ Next, install the desired distribution:
 
 ::
 
-    wsl --install Ubuntu-24.04
+    wsl --install --distribution Ubuntu-24.04
 
 c. Open WSL
 ~~~~~~~
