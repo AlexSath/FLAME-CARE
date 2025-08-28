@@ -23,13 +23,16 @@ How To Dataset Management
 How To Training
 ^^^^^^^^^^^^^^^
 .. image:: https://img.youtube.com/vi/lBp3NP9mihk/maxresdefault.jpg
-    :alt: FLAME-cARE Tutorial - Training
+    :alt: FLAME-CARE Tutorial - Training
     :target: https://www.youtube.com/watch?v=lBp3NP9mihk
     :width: 300
 
 How To Model Version Control
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-`Video Link <_blank>`_
+.. image:: https://img.youtube.com/vi/o4w1KtUU1uk/maxresdefault.jpg
+    :alt: FLAME-CARE Tutorial - Model Version Control
+    :target: https://www.youtube.com/watch?v=o4w1KtUU1uk
+    :width: 300
 
 How To CLI Inference
 ^^^^^^^^^^^^^^^^^^^^
