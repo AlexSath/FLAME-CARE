@@ -7,3 +7,4 @@ Usage
 
     cmdline
     matlab
+    server
