@@ -10,6 +10,9 @@ The WSL interface can also be used for inference. However, to run inference, **C
 installed in WSL separately from any native Windows installations**. While inference is possible thorugh WSL, this tutorial 
 is designed for training; therefore, it won't include installation instructions for these dependencies in WSL for now.
 
+⚠️ Many versions of Windows can install WSL, but **only Windows 11 and up have WSL capable of machine learning**. Be
+se sure WSL is being installed on a Windows 11 machine before proceeding. 
+
 1. Install WSL (Ubuntu 24.04)
 ^^^^^^^^^^^^^^
 
@@ -40,6 +43,10 @@ Close and re-open the PowerShell prompt. Then, open WSL according to the image b
 
 .. image:: ../../images/install/wsl/open_ubuntu.png
     :alt: Image showing dropdown to open a new shell in PowerShell with Ubuntu-24.04 boxed.
+
+⚠️ Occasionally, Windows machines have an important feature--"Virtualization"--disabled by default. When disabled,
+starting WSL is impossible. Follow `this tutorial <https://support.microsoft.com/en-us/windows/enable-virtualization-on-windows-c5578302-6e43-4b4b-a449-8ced115f58e1>`_
+to enable virtualization on any Windows machine through BIOS.
 
 
 2. Downloading Source Code
